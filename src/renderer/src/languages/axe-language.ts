@@ -181,6 +181,13 @@ export function registerAxeLanguage(): void {
       'input.foreground': '#f5c0c0',
       'scrollbarSlider.background': '#29202080',
       'scrollbarSlider.hoverBackground': '#6b3a3a',
+      'editorBracketHighlight.foreground1': '#fcfdfdff',
+      'editorBracketHighlight.foreground2': '#a7cfdaff',
+      'editorBracketHighlight.foreground3': '#7aa2f7',
+      'editorBracketHighlight.foreground4': '#ffffffff',
+      'editorBracketHighlight.foreground5': '#b2cafcff',
+      'editorBracketHighlight.foreground6': '#bed2ffff',
+      'editorBracketHighlight.unexpectedBracket.foreground': '#f7768e',
     }
   })
 
