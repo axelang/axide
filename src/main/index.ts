@@ -63,7 +63,7 @@ function createWindow(): void {
 
   setTimeout(() => {
     mainWindow?.show();
-  }, 2000);
+  }, 1000);
 
   mainWindow.webContents.openDevTools();
 }
