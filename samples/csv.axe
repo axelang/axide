@@ -1,0 +1,400 @@
+use std.string;
+use std.lists;
+use std.arena;
+
+/// CSV row model - represents a single row of CSV data
+pub model CsvRow {
+    fields: StringList;
+    field_count: usize;
+}
+
+/// CSV document model - represents an entire CSV file
+pub model CsvDocument {
+    rows: ref CsvRow;
+    row_count: usize;
+    row_capacity: usize;
+    arena: ref Arena;
+}
+
+/// CSV parser options
+pub model CsvOptions {
+    delimiter: char;
+    quote_char: char;
+    has_header: bool;
+}
+
+/// Create default CSV options (comma delimiter, double quote, no header assumption)
+pub def default_options(): CsvOptions {
+    mut opts: CsvOptions;
+    opts.delimiter = ',';
+    opts.quote_char = '"';
+    opts.has_header = false;
+    return opts;
+}
+
+/// Create a new empty CSV document with arena allocator
+pub def create_document(arena: ref Arena): CsvDocument {
+    mut doc: CsvDocument;
+    doc.rows = nil;
+    doc.row_count = 0;
+    doc.row_capacity = 0;
+    doc.arena = arena;
+    return doc;
+}
+
+/// Create a new empty CSV row
+pub def create_row(): CsvRow {
+    mut row: CsvRow;
+    row.fields.data = nil;
+    row.fields.len = 0;
+    row.fields.cap = 0;
+    row.field_count = 0;
+    return row;
+}
+
+/// Add a field to a CSV row (using arena allocation)
+pub def add_field(row: ref CsvRow, field: string, arena: ref Arena) {
+    if row == nil {
+        return;
+    }
+    
+    if row.fields.len >= row.fields.cap {
+        mut new_cap: usize = 4;
+        if row.fields.cap > 0 {
+            new_cap = row.fields.cap * 2;
+        }
+        
+        mut new_data: ref string = Arena.alloc(arena, new_cap * 24);
+        if new_data == nil {
+            return;
+        }
+        
+        if row.fields.data != nil {
+            for mut i = 0 to row.fields.len {
+                new_data[i] = row.fields.data[i];
+            }
+        }
+        
+        row.fields.data = new_data;
+        row.fields.cap = new_cap;
+    }
+    
+    row.fields.data[row.fields.len] = field;
+    row.fields.len = row.fields.len + 1;
+    row.field_count = row.field_count + 1;
+}
+
+/// Add a row to a CSV document (using arena allocation)
+pub def add_row(doc: ref CsvDocument, row: CsvRow) {
+    if doc == nil {
+        return;
+    }
+    
+    if doc.row_count >= doc.row_capacity {
+        mut new_cap: usize = 8;
+        if doc.row_capacity > 0 {
+            new_cap = doc.row_capacity * 2;
+        }
+        
+        mut new_rows: ref CsvRow = Arena.alloc(doc.arena, new_cap * 32);
+        if new_rows == nil {
+            return;
+        }
+        
+        if doc.rows != nil {
+            for mut i = 0 to doc.row_count {
+                new_rows[i] = doc.rows[i];
+            }
+        }
+        
+        doc.rows = new_rows;
+        doc.row_capacity = new_cap;
+    }
+    
+    doc.rows[doc.row_count] = row;
+    doc.row_count = doc.row_count + 1;
+}
+
+/// Get a row from a CSV document by index
+pub def get_row(doc: ref CsvDocument, index: usize): ref CsvRow {
+    if doc != nil and index < doc.row_count {
+        return addr(doc.rows[index]);
+    }
+    return nil;
+}
+
+/// Get a field from a CSV row by index
+pub def get_field(row: ref CsvRow, index: usize): string {
+    if row != nil and index < row.field_count {
+        return row.fields.data[index];
+    }
+    return string.create("");
+}
+
+/// Parse a CSV string into a document (using arena allocation)
+pub def parse(csv_data: string, options: CsvOptions, arena: ref Arena): CsvDocument {
+    mut doc: CsvDocument = create_document(arena);
+    mut current_row: CsvRow = create_row();
+    
+    mut current_field_data: ref char = Arena.alloc(arena, 1024);
+    mut current_field_cap: usize = 1024;
+    mut field_pos: usize = 0;
+    
+    if current_field_data == nil {
+        return doc;
+    }
+    
+    mut in_quotes: bool = false;
+    
+    for mut i = 0 to csv_data.len {
+        val c: char = csv_data.data[i];
+        
+        if c == options.quote_char {
+            if in_quotes {
+                if i + 1 < csv_data.len and csv_data.data[i + 1] == options.quote_char {
+                    if field_pos >= current_field_cap - 1 {
+                        val new_cap: usize = current_field_cap * 2;
+                        mut new_data: ref char = Arena.alloc(arena, new_cap);
+                        if new_data != nil {
+                            for mut j = 0 to field_pos {
+                                new_data[j] = current_field_data[j];
+                            }
+                            current_field_data = new_data;
+                            current_field_cap = new_cap;
+                        }
+                    }
+                    current_field_data[field_pos] = c;
+                    field_pos = field_pos + 1;
+                    i = i + 1;
+                } else {
+                    in_quotes = false;
+                }
+            } else {
+                in_quotes = true;
+            }
+        } elif c == options.delimiter and !in_quotes {
+            current_field_data[field_pos] = '\0';
+            
+            mut field_copy_data: ref char = Arena.alloc(arena, field_pos + 1);
+            if field_copy_data != nil {
+                for mut j = 0 to field_pos + 1 {
+                    field_copy_data[j] = current_field_data[j];
+                }
+                
+                mut field_copy: string;
+                field_copy.data = field_copy_data;
+                field_copy.len = field_pos;
+                field_copy.cap = field_pos + 1;
+                add_field(addr(current_row), field_copy, arena);
+            }
+            
+            field_pos = 0;
+        } elif (c == '\n' or c == '\r') and !in_quotes {
+            if c == '\r' and i + 1 < csv_data.len and csv_data.data[i + 1] == '\n' {
+                i = i + 1;
+            }
+            
+            current_field_data[field_pos] = '\0';
+            
+            mut field_copy_data: ref char = Arena.alloc(arena, field_pos + 1);
+            if field_copy_data != nil {
+                for mut j = 0 to field_pos + 1 {
+                    field_copy_data[j] = current_field_data[j];
+                }
+                
+                mut field_copy: string;
+                field_copy.data = field_copy_data;
+                field_copy.len = field_pos;
+                field_copy.cap = field_pos + 1;
+                add_field(addr(current_row), field_copy, arena);
+            }
+            
+            if current_row.field_count > 0 {
+                add_row(addr(doc), current_row);
+                current_row = create_row();
+            }
+            
+            field_pos = 0;
+        } else {
+            if field_pos >= current_field_cap - 1 {
+                val new_cap: usize = current_field_cap * 2;
+                mut new_data: ref char = Arena.alloc(arena, new_cap);
+                if new_data != nil {
+                    for mut j = 0 to field_pos {
+                        new_data[j] = current_field_data[j];
+                    }
+                    current_field_data = new_data;
+                    current_field_cap = new_cap;
+                }
+            }
+            current_field_data[field_pos] = c;
+            field_pos = field_pos + 1;
+        }
+    }
+    
+    if field_pos > 0 or current_row.field_count > 0 {
+        current_field_data[field_pos] = '\0';
+        
+        mut field_copy_data: ref char = Arena.alloc(arena, field_pos + 1);
+        if field_copy_data != nil {
+            for mut j = 0 to field_pos + 1 {
+                field_copy_data[j] = current_field_data[j];
+            }
+            
+            mut field_copy: string;
+            field_copy.data = field_copy_data;
+            field_copy.len = field_pos;
+            field_copy.cap = field_pos + 1;
+            add_field(addr(current_row), field_copy, arena);
+        }
+        
+        if current_row.field_count > 0 {
+            add_row(addr(doc), current_row);
+        }
+    }
+    
+    return doc;
+}
+
+/// Parse CSV with default options (comma delimiter) using arena allocation
+pub def parse_simple(csv_data: string, arena: ref Arena): CsvDocument {
+    return parse(csv_data, default_options(), arena);
+}
+
+/// Convert a CSV document back to a string (using arena allocation)
+pub def csv_to_string(doc: ref CsvDocument, options: CsvOptions): string {
+    mut result: string;
+    result.data = nil;
+    result.len = 0;
+    result.cap = 0;
+    
+    if doc == nil or doc.row_count == 0 {
+        return result;
+    }
+    
+    val estimated_size: usize = doc.row_count * 100;
+    mut result_data: ref char = Arena.alloc(doc.arena, estimated_size);
+    if result_data == nil {
+        return result;
+    }
+    result.cap = estimated_size;
+    result.data = result_data;
+    
+    mut pos: usize = 0;
+    
+    for mut i = 0 to doc.row_count {
+        mut row: ref CsvRow = addr(doc.rows[i]);
+        
+        for mut j = 0 to row.field_count {
+            val field: string = row.fields.data[j];
+            
+            mut needs_quotes: bool = false;
+            for mut k = 0 to field.len {
+                if field.data[k] == options.delimiter or 
+                   field.data[k] == options.quote_char or
+                   field.data[k] == '\n' or field.data[k] == '\r' {
+                    needs_quotes = true;
+                }
+            }
+            
+            mut needed: usize = field.len + 5;
+            if needs_quotes {
+                needed = field.len + field.len + 10;
+            }
+            
+            loop {
+                if pos + needed < result.cap {
+                    break;
+                }
+                
+                val new_cap: usize = result.cap * 2;
+                mut new_data: ref char = Arena.alloc(doc.arena, new_cap);
+                if new_data == nil {
+                    return result;
+                }
+                for mut m = 0 to pos {
+                    new_data[m] = result.data[m];
+                }
+                result.data = new_data;
+                result.cap = new_cap;
+            }
+            
+            if needs_quotes {
+                result.data[pos] = options.quote_char;
+                pos = pos + 1;
+                for mut k = 0 to field.len {
+                    if field.data[k] == options.quote_char {
+                        result.data[pos] = options.quote_char;
+                        pos = pos + 1;
+                        result.data[pos] = options.quote_char;
+                        pos = pos + 1;
+                    } else {
+                        result.data[pos] = field.data[k];
+                        pos = pos + 1;
+                    }
+                }
+                result.data[pos] = options.quote_char;
+                pos = pos + 1;
+            } else {
+                for mut k = 0 to field.len {
+                    result.data[pos] = field.data[k];
+                    pos = pos + 1;
+                }
+            }
+            
+            if j < row.field_count - 1 {
+                result.data[pos] = options.delimiter;
+                pos = pos + 1;
+            }
+        }
+        
+        result.data[pos] = '\n';
+        pos = pos + 1;
+    }
+    
+    result.data[pos] = '\0';
+    result.len = pos;
+    
+    return result;
+}
+
+test {
+    mut arena: Arena = Arena.create(65536);
+    
+    mut csv_str: string = string.create("name,age,city\nJohn,30,NYC\nJane,25,LA\n");
+    mut doc: CsvDocument = parse_simple(csv_str, addr(arena));
+    
+    assert doc.row_count == 3, "Should parse 3 rows";
+    
+    mut row0: ref CsvRow = get_row(addr(doc), cast[usize](0));
+    assert row0 != nil, "Should get first row";
+    assert row0.field_count == 3, "First row should have 3 fields";
+    
+    mut field0: string = get_field(row0, cast[usize](0));
+    assert field0.len == 4, "First field should be 'name'";
+    
+    mut row1: ref CsvRow = get_row(addr(doc), cast[usize](1));
+    assert row1 != nil, "Should get second row";
+    assert row1.field_count == 3, "Second row should have 3 fields";
+    
+    mut name: string = get_field(row1, cast[usize](0));
+    assert name.len == 4, "Name should be 'John'";
+    
+    mut age: string = get_field(row1, cast[usize](1));
+    assert age.len == 2, "Age should be '30'";
+    
+    mut quoted_csv: string = string.create("\"Smith, John\",30,\"New York, NY\"\n");
+    mut quoted_doc: CsvDocument = parse_simple(quoted_csv, addr(arena));
+    
+    assert quoted_doc.row_count == 1, "Should parse 1 row with quoted fields";
+    
+    mut quoted_row: ref CsvRow = get_row(addr(quoted_doc), cast[usize](0));
+    assert quoted_row != nil, "Should get quoted row";
+    assert quoted_row.field_count == 3, "Should have 3 fields despite internal commas";
+    
+    mut opts: CsvOptions = default_options();
+    mut regenerated: string = csv_to_string(addr(doc), opts);
+    assert regenerated.len > 0, "Should generate CSV string";
+    
+    Arena.destroy(addr(arena));
+}

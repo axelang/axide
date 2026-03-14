@@ -1,0 +1,790 @@
+use std.string (
+    string,
+    find_last_char,
+    substring_se
+);
+use std.io (
+    print_str
+);
+use std.errors (
+    error, panic
+);
+use std.lists (
+    StringList
+);
+use std.arena (
+    Arena
+);
+
+/// Execute a shell command. Returns exit status.
+pub def exec_from_string(cmd: string): i32 {
+    mut val result: i32 = 0;
+    unsafe {
+        result = C.system(cmd.data);
+    }
+    return result;
+}
+
+/// Execute a shell command with raw C string.
+/// Returns exit status.
+pub def exec(cmd: ref char): i32 {
+    mut val result: i32 = 0;
+    unsafe {
+        result = C.system(cmd);
+    }
+    return result;
+}
+
+/// Execute a shell command and capture stdout/stderr output.
+/// Returns exit status and output string.
+pub model ExecResult {
+    pub exit_code: i32;
+    pub output: string;
+}
+
+platform windows {
+    extern def _popen(command: ref char, mode: ref char): usize;
+    extern def _pclose(stream: usize): i32;
+}
+
+platform posix {
+    extern def popen(command: ref char, mode: ref char): usize;
+    extern def pclose(stream: usize): i32;
+}
+
+extern def fgets(buf: ref char, size: i32, stream: usize): ref char;
+extern def realloc(ptr: usize, size: usize): usize;
+extern def strcpy(dest: ref char, src: ref char): ref char;
+
+/// Execute a shell command and capture stdout/stderr output.
+///
+/// Returns exit status and output string.
+pub def exec_capture(cmd: string): ExecResult {
+    mut result: ExecResult;
+    result.exit_code = -1;
+    result.output = str("");
+    
+    mut full_cmd: char[4096];
+    unsafe {
+        C.snprintf(full_cmd, 4096, "%s 2>&1", cmd.data);
+    }
+    
+    mut pipe: usize = 0;
+    platform windows {
+        pipe = _popen(full_cmd, "r");
+    }
+    platform posix {
+        pipe = popen(full_cmd, "r");
+    }
+    
+    if pipe == 0 {
+        return result;
+    }
+    
+    mut capacity: usize = 4096;
+    mut output_buf: usize = malloc(capacity);
+    if output_buf == 0 {
+        platform windows {
+            _pclose(pipe);
+        }
+        platform posix {
+            pclose(pipe);
+        }
+        return result;
+    }
+    
+    mut total_len: usize = 0;
+    mut buffer: char[1024];
+    
+    loop {
+        val read_result: ref char = fgets(buffer, 1024, pipe);
+        if read_result == nil {
+            break;
+        }
+        
+        val len: usize = strlen(buffer);
+        
+        if total_len + len + 1 > capacity {
+            capacity = capacity * 2;
+            val new_buf: usize = realloc(output_buf, capacity);
+            if new_buf == 0 {
+                free(output_buf);
+                platform windows {
+                    _pclose(pipe);
+                }
+                platform posix {
+                    pclose(pipe);
+                }
+                return result;
+            }
+            output_buf = new_buf;
+        }
+        
+        unsafe {
+            val dest: ref char = output_buf + total_len;
+            C.strcpy(dest, buffer);
+        }
+        total_len = total_len + len;
+    }
+    
+    platform windows {
+        result.exit_code = _pclose(pipe);
+    }
+
+    platform posix {
+        val status: i32 = pclose(pipe);
+        unsafe {
+            result.exit_code = C.WEXITSTATUS(status);
+        }
+    }
+    
+    unsafe {
+        result.output.data = output_buf;
+        result.output.len = total_len;
+    }
+    
+    return result;
+}
+
+/// Quit with some code.
+pub def quit(code: i32) {
+    unsafe {
+        C.exit(code);
+    }
+}
+
+/// Check if a file exists.
+pub def file_exists(path: string): bool {
+    mut val out: bool = false;
+    foreign {FILE};
+
+    val f: ref FILE = fopen(path.data, "r");
+    if f != nil {
+        fclose(f);
+        out = true;
+    }
+    return out;
+}
+
+/// Read entire file into a newly allocated string.
+/// Returns empty string if file cannot be opened.
+pub def read_file(path: string): string {
+    mut f: ref FILE = fopen(path.data, "rb");
+
+    if (!f) {
+        return str("");
+    }
+
+    foreign {SEEK_END, SEEK_SET};
+
+    unsafe {
+        C.fseek(f, 0, SEEK_END);
+        val size: usize = C.ftell(f);
+        C.fseek(f, 0, SEEK_SET);
+        mut buf: ref char = cast[ref char](C.malloc(size + 1));
+
+        C.fread(buf, 1, size, f);
+        buf[size] = '\0';
+        C.fclose(f);
+
+        return string.create(buf);
+    }
+}
+
+/// Write a string to a file, replacing its contents.
+/// Returns true on success.
+pub def write_file(path: string, contents: string): bool {
+    foreign {FILE};
+    unsafe {
+        mut f: ref FILE = C.fopen(path.data, "wb");
+        if !f {
+            return false;
+        }
+        C.fwrite(contents.data, 1, contents.len, f);
+        C.fclose(f);
+    }
+    return true;
+}
+
+use external("sys/stat.h");
+use external("sys/types.h");
+
+/// Determine if a path is a directory.
+pub def is_directory(path: string): bool {
+    mut out: bool = false;
+
+    foreign {_S_IFDIR, stat, _stat};
+    
+    platform posix {
+        mut sb: $(stat);
+        if C.stat(path.data, addr(sb)) == 0 {
+            out = C.S_ISDIR(sb.st_mode);
+        }
+    }
+
+    platform windows {
+        mut sb: $(_stat);
+        if C._stat(path.data, addr(sb)) == 0 {
+            out = (sb.st_mode & _S_IFDIR) != 0;
+        }
+    }
+
+    return out;
+}
+
+/// Determine if a path is a regular file.
+pub def is_file(path: string): bool {
+    mut out: bool = false;
+
+    platform posix {
+        mut sb: $(stat);
+        if C.stat(path.data, addr(sb)) == 0 {
+            out = C.S_ISREG(sb.st_mode);
+        }
+    }
+
+    platform windows {
+        mut sb: $(_stat);
+        if C._stat(path.data, addr(sb)) == 0 {
+            out = (sb.st_mode & _S_IFREG) != 0;
+        }
+    }
+
+    return out;
+}
+
+/// Determine if a path is a symbolic link.
+/// This always returns false on Windows.
+pub def is_symbolic_link(path: string): bool {
+    mut val out: bool = false;
+
+    platform posix {
+        mut sb: $(stat);
+        if C.lstat(path.data, addr(sb)) == 0 {
+            out = C.S_ISLNK(sb.st_mode);
+        }
+    }
+
+    platform windows {
+        return false;
+    }
+
+    return out;
+}
+
+/// Delete a file.
+pub def delete_file(path: string): bool {
+    mut ok: bool = false;
+    if C.remove(path.data) == 0 {
+        ok = true;
+    }
+    return ok;
+}
+
+/// Delete some directory. It must be empty.
+pub def rm_dir(path: string): bool {
+    mut ok: bool = false;
+    if C.rmdir(path.data) == 0 {
+        ok = true;
+    }
+    return ok;
+}
+
+platform windows {
+    use external("io.h");
+    use external("direct.h");
+}
+
+platform posix {
+    use external("dirent.h");
+}
+
+platform posix {
+    opaque { dirent };
+    
+    extern def opendir(name: ref char): usize;
+    extern def readdir(dirp: usize): usize;
+    extern def closedir(dirp: usize): i32;
+    extern def stat(pathname: ref char, statbuf: usize): i32;
+}
+
+def dirent_d_name(entry: usize): ref char {
+    platform posix {
+        unsafe {
+            val d: ref dirent = cast[ref dirent](entry);
+            return d*.d_name;
+        }
+    }
+}
+
+def stat_is_dir(st: usize): i32 {
+    platform posix {
+        unsafe {
+            val sb: ref $(stat) = cast[ref struct stat](st);
+            return C.S_ISDIR(sb.st_mode);
+        }
+    }
+}
+
+platform windows {
+    opaque { _finddata_t };
+    
+    extern def _findfirst(filespec: ref char, fileinfo: usize): isize;
+    extern def _findnext(handle: isize, fileinfo: usize): i32;
+    extern def _findclose(handle: isize): i32;
+}
+
+def finddata_name(data: usize): ref char {
+    platform windows {
+        unsafe {
+            val info: ref _finddata_t = cast[ref _finddata_t](data);
+            return info*.name;
+        }
+    }
+}
+
+def finddata_is_dir(data: usize): i32 {
+    platform windows {
+        unsafe {
+            val info: ref _finddata_t = cast[ref _finddata_t](data);
+            return (info*.attrib & _A_SUBDIR) != 0;
+        }
+    }
+}
+
+extern def malloc(size: usize): usize;
+extern def free(ptr: usize);
+extern def strlen(s: ref char): usize;
+extern def strcmp(s1: ref char, s2: ref char): i32;
+extern def snprintf(buf: ref char, size: usize, format: ref char, ...): i32;
+extern def remove(pathname: ref char): i32;
+extern def rmdir(path: ref char): i32;
+
+/// Delete some directory, it does NOT have to be empty.
+/// Use with caution.
+pub def rm_dir_recursive(path: string): bool {
+    mut val ok: bool = true;
+
+    platform posix {
+        val d: usize = opendir(path.data);
+        val path_len: usize = strlen(path.data);
+        mut val r: i32 = 0;
+
+        if d != 0 {
+            loop {
+                val p: usize = readdir(d);
+                if p == 0 {
+                    break;
+                }
+                
+                val name: ref char = dirent_d_name(p);
+                if strcmp(name, ".") == 0 {
+                    continue;
+                }
+                if strcmp(name, "..") == 0 {
+                    continue;
+                }
+
+                val len: usize = path_len + strlen(name) + 2;
+                val buf: usize = malloc(len);
+                if buf == 0 {
+                    r = -1;
+                    break;
+                }
+                
+                snprintf(buf, len, "%s/%s", path.data, name);
+
+                val statbuf: usize = malloc(256);
+                if stat(buf, statbuf) == 0 {
+                    if stat_is_dir(statbuf) != 0 {
+                        val sub_path: string = string.create(buf);
+                        if !rm_dir_recursive(sub_path) {
+                            r = -1;
+                        }
+                    } else {
+                        if remove(buf) != 0 {
+                            r = -1;
+                        }
+                    }
+                } else {
+                    r = -1;
+                }
+                
+                free(statbuf);
+                free(buf);
+                
+                if r != 0 {
+                    break;
+                }
+            }
+            unsafe {
+                C.closedir(d);
+            }
+        }
+        
+        if r == 0 {
+            if rmdir(path.data) != 0 {
+                r = -1;
+            }
+        }
+        
+        if r != 0 {
+            ok = false;
+        }
+    }
+
+    platform windows {
+        mut val r: i32 = 0;
+        val search_buf: usize = malloc(260);
+        snprintf(search_buf, 260, "%s\\*", path.data);
+        
+        val fileinfo: usize = malloc(320);
+        val handle: isize = _findfirst(search_buf, fileinfo);
+        free(search_buf);
+        
+        if handle != -1 {
+            loop {
+                val name: ref char = finddata_name(fileinfo);
+                if strcmp(name, ".") != 0 {
+                    if strcmp(name, "..") != 0 {
+                        val sub_buf: usize = malloc(260);
+                        snprintf(sub_buf, 260, "%s\\%s", path.data, name);
+                        
+                        if finddata_is_dir(fileinfo) != 0 {
+                            val sub_path: string = string.create(sub_buf);
+                            if !rm_dir_recursive(sub_path) {
+                                r = -1;
+                            }
+                        } else {
+                            if remove(sub_buf) != 0 {
+                                r = -1;
+                            }
+                        }
+                        
+                        free(sub_buf);
+                    }
+                }
+                
+                if r != 0 {
+                    break;
+                }
+                
+                if _findnext(handle, fileinfo) != 0 {
+                    break;
+                }
+            }
+            
+            _findclose(handle);
+        }
+        
+        free(fileinfo);
+        
+        if r == 0 {
+            if rmdir(path.data) != 0 {
+                r = -1;
+            }
+        }
+
+        if r != 0 {
+            ok = false;
+        }
+    }
+
+    return ok;
+}
+
+def stat_is_reg(st: usize): i32 {
+    platform posix {
+        unsafe {
+            val sb: ref $(stat) = cast[ref struct stat](st);
+            return C.S_ISREG(sb.st_mode);
+        }
+    }
+}
+
+/// Internal helper to collect files recursively into a StringList.
+pub def collect_files_recursive(path: string, result: ref StringList, arena: ref Arena) {
+    platform posix {
+        val d: usize = opendir(path.data);
+        if d == 0 {
+            return;
+        }
+
+        loop {
+            val p: usize = readdir(d);
+            if p == 0 {
+                break;
+            }
+            
+            val name: ref char = dirent_d_name(p);
+            if strcmp(name, ".") == 0 {
+                continue;
+            }
+            if strcmp(name, "..") == 0 {
+                continue;
+            }
+
+            val len: usize = strlen(path.data) + strlen(name) + 2;
+            val buf: usize = malloc(len);
+            if buf == 0 {
+                continue;
+            }
+
+            snprintf(buf, len, "%s/%s", path.data, name);
+
+            val statbuf: usize = malloc(256);
+            if stat(buf, statbuf) == 0 {
+                if stat_is_dir(statbuf) != 0 {
+                    val sub_path: string = string.create(cast[ref char](buf));
+                    collect_files_recursive(sub_path, result, arena);
+                } elif stat_is_reg(statbuf) != 0 {
+                    val file_path: string = string.create(cast[ref char](buf));
+                    StringList.push(result, arena, file_path);
+                }
+            }
+
+            free(statbuf);
+            free(buf);
+        }
+        unsafe {
+            C.closedir(d);
+        }
+    }
+
+    platform windows {
+        val search_buf: usize = malloc(260);
+        snprintf(search_buf, 260, "%s\\*", path.data);
+
+        val fileinfo: usize = malloc(320);
+        val handle: isize = _findfirst(search_buf, fileinfo);
+        free(search_buf);
+
+        if handle == -1 {
+            free(fileinfo);
+            return;
+        }
+
+        loop {
+            val name: ref char = finddata_name(fileinfo);
+            if strcmp(name, ".") != 0 {
+                if strcmp(name, "..") != 0 {
+                    val sub_buf: usize = malloc(260);
+                    snprintf(sub_buf, 260, "%s\\%s", path.data, name);
+
+                    if finddata_is_dir(fileinfo) != 0 {
+                        val sub_path: string = string.create(sub_buf);
+                        collect_files_recursive(sub_path, result, arena);
+                    } else {
+                        val file_path: string = string.create(sub_buf);
+                        StringList.push(result, arena, file_path);
+                    }
+
+                    free(sub_buf);
+                }
+            }
+
+            if _findnext(handle, fileinfo) != 0 {
+                break;
+            }
+        }
+
+        _findclose(handle);
+        free(fileinfo);
+    }
+}
+
+/// List all regular files recursively under `path`.
+pub def list_files_recursive(path: string, arena: ref Arena): ref StringList {
+    mut val result: ref StringList;
+    result = StringList.create(arena, 16);
+    collect_files_recursive(path, result, arena);
+    return result;
+}
+
+/// Get the user's home directory
+pub def get_user_home_dir(): string {
+    mut out: string = str("");
+    unsafe {
+        mut value: ref char = C.getenv("USERPROFILE");
+        if !value {
+            value = C.getenv("HOME");
+        }
+        if value {
+            out.data = value;
+        }
+    }
+    return out;
+}
+
+/// Get an environment variable by name
+pub def get_env(name: string): string {
+    mut out: string = str("");
+    unsafe {
+        mut value: ref char = C.getenv(name.data);
+        if value {
+            out.data = value;
+        }
+    }
+    return out;
+}
+
+/// Get commandline args
+pub def get_cmdline_args(arena: ref Arena): ref StringList {
+    mut val result: ref StringList;
+    result = StringList.create(arena, 10);
+    
+    unsafe {
+        mut argc: i32 = 0;
+        mut argv: ref ref char = C.__axe_argv;
+        loop {
+            if argv[argc] == nil {
+                break;
+            }
+            argc++;
+        }
+        for mut i = 0; i < argc; i++ {
+            val arg_str: string = string.create(argv[i]);
+            StringList.push(result, arena, arg_str);
+        }
+    }
+    
+    return result;
+}
+
+pub def get_cwd(): string {
+    mut out: string;
+    mut buffer: char[2048];
+
+    platform posix {
+        if getcwd(buffer, sizeof(buffer)) != nil {
+            out = str(addr(buffer));            
+        } else {
+            panic(error.create("Failed to get current working directory"));
+        }
+    }
+    platform windows {
+        if _getcwd(buffer, sizeof(buffer)) != nil {
+            out = str(addr(buffer));            
+        } else {
+            panic(error.create("Failed to get current working directory"));
+        }
+    }
+
+    return out;
+}
+
+platform macos {
+    extern def _NSGetExecutablePath(buf: ref char, bufsize: ref u32): i32;
+}
+
+extern def GetModuleFileNameA(hModule: ref void, lpFilename: ref char, nSize: u32): u32;
+extern def readlink(pathname: ref char, buf: ref char, bufsiz: usize): isize;
+
+/// Get the path to the currently running executable
+pub def get_executable_path(): string {
+    mut out: string = str("");
+    mut buffer: char[2048];
+    
+    platform windows {
+        unsafe {
+            val len: u32 = GetModuleFileNameA(nil, buffer, 2048);
+            if len > 0 {
+                out = str(addr(buffer));
+            }
+        }
+    }
+    
+    platform macos {
+        unsafe {
+            val size: u32 = 2048;
+            val result: i32 = _NSGetExecutablePath(buffer, &size);
+            if result == 0 {
+                out = str(addr(buffer));
+            }
+        }
+    }
+    
+    platform linux {
+        unsafe {
+            val len: isize = readlink("/proc/self/exe", buffer, 2047);
+            if len > 0 {
+                buffer[len] = 0;
+                out = str(addr(buffer));
+            }
+        }
+    }
+
+    return out;
+}
+
+/// Get the directory containing the currently running executable
+pub def get_executable_dir(): string {
+    val exe_path: string = get_executable_path();
+    if str_len(exe_path) == 0 {
+        return str("");
+    }
+    
+    mut last_sep: i32 = -1;
+    mut i: i32 = 0;
+    val n: i32 = cast[i32](str_len(exe_path));
+    loop {
+        if i >= n {
+            break;
+        }
+        val ch: char = get_char(exe_path, i);
+        if ch == '/' or ch == '\\' {
+            last_sep = i;
+        }
+        i++;
+    }
+    
+    if last_sep < 0 {
+        return str(".");
+    }
+    
+    return substring_se(exe_path, 0, last_sep);
+}
+
+/// Extracts the filename from a path string.
+///
+/// Handles both forward and backward slashes.
+pub def get_short_filename(path: string): string {
+    val last_slash: i32 = find_last_char(path, '\\');
+    val last_slash_fwd: i32 = find_last_char(path, '/');
+    mut idx: i32 = last_slash;
+
+    if last_slash_fwd > idx {
+        idx = last_slash_fwd;
+    }
+    
+    if idx == -1 {
+        return path;
+    }
+    
+    return substring_se(path, idx + 1, cast[i32](path.len));
+}
+
+test {
+    assert(exec("echo test") == 0, "exec should run successfully");
+    assert(write_file(string.create("testfile.txt"), string.create("hello")), "write_file should succeed");
+    assert(file_exists(string.create("testfile.txt")), "file should exist after writing");
+    assert(is_file(string.create("testfile.txt")), "testfile.txt should be a file");
+    assert(is_directory(string.create(".")), "current directory should be a directory");
+    assert(!is_symbolic_link(string.create("testfile.txt")), "testfile.txt should not be a symbolic link");
+    assert(delete_file(string.create("testfile.txt")), "delete_file should succeed");
+    assert(!file_exists(string.create("testfile.txt")), "file should not exist after deletion");
+
+    mut val arena: Arena = Arena.create(65536);
+    val args: ref StringList = get_cmdline_args(addr(arena));
+    assert(args.len >= 1, "there should be at least one commandline argument");
+
+    print "(And that commandline argument is: ";
+    
+    for arg in args {
+        print_str(arg);
+    }
+
+    print ")\n";
+
+    println(get_cwd());
+}
