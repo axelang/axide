@@ -9,7 +9,7 @@ export function setupRunnerHandlers(mainWindow: BrowserWindow): void {
     if (runProcess) { runProcess.kill(); runProcess = null }
 
     try {
-      runProcess = spawn('axe', [filePath, '-r'], {
+      runProcess = spawn('axe', [filePath, '-r', '-q'], {
         cwd: dirname(filePath),
         stdio: ['pipe', 'pipe', 'pipe']
       })
