@@ -65,7 +65,7 @@ function createWindow(): void {
     mainWindow?.show();
   }, 1000);
 
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(createWindow)
