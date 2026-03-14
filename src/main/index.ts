@@ -20,8 +20,8 @@ function createWindow(): void {
     paintWhenInitiallyHidden: false,
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#16161e',
-      symbolColor: '#c0caf5',
+      color: '#161212',
+      symbolColor: '#f5c0c0',
       height: 38
     },
     webPreferences: {

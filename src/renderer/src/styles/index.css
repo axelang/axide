@@ -1,27 +1,26 @@
 :root {
   /* ── Core Palette ── */
-  --bg-deep: #13131a;
-  --bg-primary: #1a1b26;
-  --bg-secondary: #16161e;
-  --bg-tertiary: #1f2035;
-  --bg-hover: #262840;
-  --bg-active: #2a2c45;
+  --bg-deep: #131010;
+  --bg-primary: #1a1616;
+  --bg-secondary: #161212;
+  --bg-tertiary: #1f1818;
+  --bg-hover: #261a1a;
+  --bg-active: #2a1c1c;
 
-  --border: #292e42;
-  --border-subtle: #222436;
-  --border-focus: #7aa2f7;
+  --border: #292020;
+  --border-subtle: #221818;
+  --border-focus: #f7768e;
 
-  --text-primary: #c0caf5;
-  --text-secondary: #a9b1d6;
-  --text-muted: #565f89;
-  --text-bright: #e0e6ff;
+  --text-primary: #f5c0c0;
+  --text-secondary: #d6a9a9;
+  --text-muted: #895656;
+  --text-bright: #ffe0e0;
 
-  --accent: #7aa2f7;
-  --accent-hover: #89b4fa;
-  --accent-dim: rgba(122, 162, 247, 0.15);
-  --purple: #bb9af7;
+  --accent: #f7768e;
+  --accent-hover: #fa899d;
+  --accent-dim: rgba(247, 118, 142, 0.15);
   --green: #9ece6a;
-  --red: #f7768e;
+  --red: #e0556a;
   --orange: #e0af68;
   --cyan: #7dcfff;
   --teal: #73daca;
@@ -533,7 +532,7 @@ body {
   font-weight: 700;
   color: var(--text-bright);
   margin-bottom: 8px;
-  background: linear-gradient(135deg, var(--accent), var(--purple));
+  background: linear-gradient(135deg, var(--accent), var(--red));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -734,7 +733,7 @@ kbd {
 /* ── Status Bar ── */
 #statusbar {
   height: var(--statusbar-h);
-  background: var(--accent);
+  background: #8b1a1a;
   display: flex;
   align-items: center;
   justify-content: space-between;
