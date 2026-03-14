@@ -148,6 +148,8 @@ export function switchToTab(filePath: string): void {
   if (tab.viewState) editor.restoreViewState(tab.viewState)
   editor.focus()
   activeTab = filePath
+  currentBreakpointDecoIds = [] // Reset deco tracking for new tab
+  applyBreakpointDecorations()
   notifyTabChange()
 
   const monacoEl = document.getElementById('monaco-container')
@@ -226,37 +228,63 @@ function notifyTabChange(): void {
   onTabChange?.(Array.from(tabs.values()), activeTab)
 }
 
-// Breakpoint support
-const breakpointDecorations: Map<string, string[]> = new Map()
+// Breakpoint support — track line numbers per file for persistence
+const fileBreakpoints: Map<string, Set<number>> = new Map()
+let currentBreakpointDecoIds: string[] = []
+
+function applyBreakpointDecorations(): void {
+  if (!editor || !activeTab) return
+  const lines = fileBreakpoints.get(activeTab)
+  if (!lines || lines.size === 0) {
+    currentBreakpointDecoIds = editor.deltaDecorations(currentBreakpointDecoIds, [])
+    return
+  }
+  const decos = Array.from(lines).map(lineNumber => ({
+    range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+    options: {
+      glyphMarginClassName: 'breakpoint-glyph',
+      isWholeLine: true,
+      className: 'breakpoint-line',
+      stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+    }
+  }))
+  currentBreakpointDecoIds = editor.deltaDecorations(currentBreakpointDecoIds, decos)
+}
 
 export function toggleBreakpoint(lineNumber: number): { file: string; line: number; added: boolean } | null {
   if (!editor || !activeTab) return null
-  const tab = tabs.get(activeTab)
-  if (!tab) return null
 
-  const existing = breakpointDecorations.get(activeTab) || []
-  const model = tab.model
-
-  // Check if breakpoint already exists on this line
-  const decos = model.getLineDecorations(lineNumber)
-  const bpDeco = decos?.find(d => d.options.glyphMarginClassName === 'breakpoint-glyph')
-
-  if (bpDeco) {
-    // Remove breakpoint
-    editor.deltaDecorations([bpDeco.id], [])
-    breakpointDecorations.set(activeTab, existing.filter(id => id !== bpDeco.id))
-    return { file: activeTab, line: lineNumber, added: false }
-  } else {
-    // Add breakpoint
-    const newDecos = editor.deltaDecorations([], [{
-      range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-      options: {
-        glyphMarginClassName: 'breakpoint-glyph',
-        isWholeLine: true,
-        className: 'breakpoint-line',
-      }
-    }])
-    breakpointDecorations.set(activeTab, [...existing, ...newDecos])
-    return { file: activeTab, line: lineNumber, added: true }
+  let lines = fileBreakpoints.get(activeTab)
+  if (!lines) {
+    lines = new Set()
+    fileBreakpoints.set(activeTab, lines)
   }
+
+  const added = !lines.has(lineNumber)
+  if (added) {
+    lines.add(lineNumber)
+  } else {
+    lines.delete(lineNumber)
+  }
+  applyBreakpointDecorations()
+  return { file: activeTab, line: lineNumber, added }
+}
+
+export function removeBreakpointAt(file: string, line: number): void {
+  const lines = fileBreakpoints.get(file)
+  if (!lines) return
+  lines.delete(line)
+  if (file === activeTab) applyBreakpointDecorations()
+}
+
+export interface Breakpoint { file: string; line: number }
+
+export function getBreakpoints(): Breakpoint[] {
+  const result: Breakpoint[] = []
+  for (const [file, lines] of fileBreakpoints) {
+    for (const line of lines) {
+      result.push({ file, line })
+    }
+  }
+  return result
 }

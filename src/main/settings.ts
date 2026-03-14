@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS: Settings = {
   axePath: 'axe',
   axelsPath: 'axels',
   axefmtPath: 'axefmt',
-  gdbPath: 'gdb',
+  gdbPath: 'lldb-mi',
   lastOpenedFolder: '',
   lastOpenedFile: ''
 }
@@ -32,7 +32,7 @@ const DEFAULT_SETTINGS: Settings = {
 const settingsDir = join(homedir(), '.axide')
 const settingsFile = join(settingsDir, 'settings.json')
 
-async function loadSettings(): Promise<Settings> {
+export async function loadSettings(): Promise<Settings> {
   try {
     const data = await readFile(settingsFile, 'utf-8')
     return { ...DEFAULT_SETTINGS, ...JSON.parse(data) }

@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('axide', {
   debugStop: () => ipcRenderer.send('debug:stop'),
   debugSetBreakpoint: (f: string, l: number) => ipcRenderer.send('debug:breakpoint:set', f, l),
   debugRemoveBreakpoint: (f: string, l: number) => ipcRenderer.send('debug:breakpoint:remove', f, l),
+  debugSetAllBreakpoints: (bps: { file: string; line: number }[]) => ipcRenderer.send('debug:breakpoints:set-all', bps),
   debugContinue: () => ipcRenderer.send('debug:continue'),
   debugStepOver: () => ipcRenderer.send('debug:stepOver'),
   debugStepIn: () => ipcRenderer.send('debug:stepIn'),

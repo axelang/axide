@@ -22,6 +22,7 @@ export interface AxideAPI {
   debugStop(): void
   debugSetBreakpoint(file: string, line: number): void
   debugRemoveBreakpoint(file: string, line: number): void
+  debugSetAllBreakpoints(bps: { file: string; line: number }[]): void
   debugContinue(): void
   debugStepOver(): void
   debugStepIn(): void

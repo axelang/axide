@@ -3,13 +3,13 @@ import { registerAxeLanguage } from './languages/axe-language'
 import {
   initEditor, openFile, switchToTab, closeTab, getActiveFilePath,
   onTabsChanged, onCursorChanged, applySettings,
-  toggleBreakpoint, getEditor, type EditorTab
+  toggleBreakpoint, getEditor, getBreakpoints, type EditorTab
 } from './editor/editor'
 import { startLsp, notifyDocumentOpened, notifyDocumentChanged, notifyDocumentClosed, registerProviders } from './editor/lsp-client'
 import { initFileExplorer, loadDirectory, setActiveFile, refreshTree, getRootPath } from './panels/file-explorer'
 import { initTerminal, runFile, stopRun } from './panels/terminal'
 import { initSearch } from './panels/search'
-import { initDebugPanel, startDebug } from './panels/debugger'
+import { initDebugPanel, startDebug, updateBreakpointsUI } from './panels/debugger'
 import { initSettings, getSettings } from './panels/settings'
 import type { Settings } from './env'
 
@@ -48,7 +48,11 @@ async function init(): Promise<void> {
 
   document.addEventListener('debug-start-request', () => {
     const fp = getActiveFilePath()
-    if (fp) startDebug(fp)
+    if (fp) {
+      // Send all current breakpoints to the main process before starting the session
+      window.axide.debugSetAllBreakpoints(getBreakpoints())
+      startDebug(fp)
+    }
   })
 
   const editor = getEditor()
@@ -64,6 +68,7 @@ async function init(): Promise<void> {
             } else {
               window.axide.debugRemoveBreakpoint(result.file, result.line)
             }
+            updateBreakpointsUI()
           }
         }
       }
@@ -352,7 +357,10 @@ function setupKeyboardShortcuts(): void {
     if (e.key === 'F9') {
       e.preventDefault()
       const fp = getActiveFilePath()
-      if (fp) startDebug(fp)
+      if (fp) {
+        window.axide.debugSetAllBreakpoints(getBreakpoints())
+        startDebug(fp)
+      }
     }
     // Ctrl+Shift+E: Explorer
     if (e.ctrlKey && e.shiftKey && e.key === 'E') {

@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS: Settings = {
   axePath: 'axe',
   axelsPath: 'axels',
   axefmtPath: 'axefmt',
-  gdbPath: 'gdb',
+  gdbPath: 'lldb-mi',
   lastOpenedFolder: '',
   lastOpenedFile: ''
 }
@@ -64,7 +64,7 @@ export async function initSettings(container: HTMLElement, changedCb: (settings:
         <input type="text" class="setting-text" id="set-axefmt-path" value="${esc(currentSettings.axefmtPath)}" />
       </div>
       <div class="setting-row">
-        <div><div class="setting-label">GDB Path</div></div>
+        <div><div class="setting-label">Debugger Path (lldb-mi/gdb)</div></div>
         <input type="text" class="setting-text" id="set-gdb-path" value="${esc(currentSettings.gdbPath)}" />
       </div>
     </div>

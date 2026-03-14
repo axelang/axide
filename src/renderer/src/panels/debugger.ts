@@ -1,4 +1,5 @@
 import { appendDebugOutput, clearDebugConsole } from './terminal'
+import { getBreakpoints, removeBreakpointAt } from '../editor/editor'
 import type { DebugVariable } from '../env'
 
 let isDebugging = false
@@ -39,6 +40,12 @@ export function initDebugPanel(container: HTMLElement, navigateCb: (file: string
         <div style="color: var(--text-muted); font-size: 12px;">Not debugging</div>
       </div>
     </div>
+    <div class="debug-section">
+      <div class="debug-section-title">BREAKPOINTS</div>
+      <div id="debug-breakpoints" class="debug-breakpoints">
+        <div style="color: var(--text-muted); font-size: 12px;">No breakpoints</div>
+      </div>
+    </div>
   `
 
   variablesContainer = document.getElementById('debug-variables')
@@ -74,6 +81,49 @@ export function initDebugPanel(container: HTMLElement, navigateCb: (file: string
     if (variablesContainer) {
       variablesContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">Debug session ended</div>'
     }
+  })
+
+  updateBreakpointsUI()
+}
+
+export function updateBreakpointsUI(): void {
+  const container = document.getElementById('debug-breakpoints')
+  if (!container) return
+
+  const bps = getBreakpoints()
+  if (bps.length === 0) {
+    container.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No breakpoints</div>'
+    return
+  }
+
+  container.innerHTML = bps.map(bp => {
+    const filename = bp.file.split(/[\\/]/).pop() || bp.file
+    return `
+      <div class="debug-bp-item" data-file="${escapeHtml(bp.file)}" data-line="${bp.line}">
+        <div class="debug-bp-dot"></div>
+        <div class="debug-bp-location" title="${escapeHtml(bp.file)}">${escapeHtml(filename)}:${bp.line}</div>
+        <button class="debug-bp-remove" title="Remove Breakpoint">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    `
+  }).join('')
+
+  // Add event listeners locally
+  container.querySelectorAll('.debug-bp-item').forEach(item => {
+    const el = item as HTMLElement
+    const file = el.getAttribute('data-file')!
+    const line = parseInt(el.getAttribute('data-line')!)
+
+    el.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('.debug-bp-remove')) {
+        removeBreakpointAt(file, line)
+        window.axide.debugRemoveBreakpoint(file, line)
+        updateBreakpointsUI()
+      } else {
+        onDebugNavigate?.(file, line)
+      }
+    })
   })
 }
 

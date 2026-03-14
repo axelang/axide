@@ -1024,6 +1024,100 @@ kbd {
   margin-left: 6px;
 }
 
+/* ── Breakpoint Glyph ── */
+.breakpoint-glyph {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.breakpoint-glyph::before {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 6px rgba(224, 85, 106, 0.5);
+  transition: transform 120ms var(--ease);
+}
+
+.breakpoint-glyph:hover::before {
+  transform: scale(1.15);
+}
+
+.breakpoint-line {
+  background: rgba(224, 85, 106, 0.08) !important;
+}
+
+/* Gutter hover preview (dim dot when hovering an empty gutter line) */
+.margin-view-overlays > div:hover .cgmr {
+  cursor: pointer;
+}
+
+/* ── Breakpoints List ── */
+.debug-breakpoints {
+  padding: 4px 0;
+}
+
+.debug-bp-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background var(--dur) var(--ease);
+}
+
+.debug-bp-item:hover {
+  background: var(--bg-hover);
+}
+
+.debug-bp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+}
+
+.debug-bp-location {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.debug-bp-remove {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all var(--dur) var(--ease);
+}
+
+.debug-bp-item:hover .debug-bp-remove {
+  opacity: 0.6;
+}
+
+.debug-bp-remove:hover {
+  opacity: 1 !important;
+  background: var(--bg-active);
+  color: var(--red);
+}
+
 /* ══════ SETTINGS PANEL ══════ */
 .settings-group {
   padding: 12px 14px;
