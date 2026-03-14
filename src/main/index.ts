@@ -17,6 +17,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     backgroundColor: '#1a1b26',
+    paintWhenInitiallyHidden: false,
     titleBarStyle: 'hidden',
     titleBarOverlay: {
       color: '#16161e',
@@ -59,6 +60,10 @@ function createWindow(): void {
   }
 
   mainWindow.once('ready-to-show', () => mainWindow?.show())
+
+  setTimeout(() => {
+    mainWindow?.show();
+  }, 2000);
 }
 
 app.whenReady().then(createWindow)
