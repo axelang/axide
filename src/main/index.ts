@@ -6,6 +6,7 @@ import { setupLspHandlers } from './lsp'
 import { setupRunnerHandlers } from './runner'
 import { setupDebugHandlers } from './debugger'
 import { setupSettingsHandlers } from './settings'
+import { setupTerminalHandlers } from './terminal'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -38,6 +39,7 @@ function createWindow(): void {
   setupRunnerHandlers(mainWindow)
   setupDebugHandlers(mainWindow)
   setupSettingsHandlers()
+  setupTerminalHandlers(mainWindow)
 
   ipcMain.on('window:minimize', () => mainWindow?.minimize())
   ipcMain.on('window:maximize', () => {

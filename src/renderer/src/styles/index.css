@@ -701,6 +701,20 @@ kbd {
   display: block;
 }
 
+#terminal-content {
+  padding: 0;
+  background: #1a1b26;
+}
+
+#terminal-content .xterm {
+  padding: 8px;
+  height: 100%;
+}
+
+#terminal-content .xterm-viewport {
+  background-color: #1a1b26 !important;
+}
+
 /* ── Run Controls ── */
 .run-btn {
   display: flex;

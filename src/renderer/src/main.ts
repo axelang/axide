@@ -8,6 +8,7 @@ import {
 import { startLsp, notifyDocumentOpened, notifyDocumentChanged, notifyDocumentClosed, registerProviders } from './editor/lsp-client'
 import { initFileExplorer, loadDirectory, setActiveFile, refreshTree, getRootPath } from './panels/file-explorer'
 import { initTerminal, runFile, stopRun } from './panels/terminal'
+import { initInteractiveTerminal, focusTerminal } from './panels/interactive-terminal'
 import { initSearch } from './panels/search'
 import { initDebugPanel, startDebug, updateBreakpointsUI } from './panels/debugger'
 import { initSettings, getSettings } from './panels/settings'
@@ -20,6 +21,7 @@ async function init(): Promise<void> {
   registerProviders()
   initFileExplorer(document.getElementById('file-tree')!, handleFileOpen)
   initTerminal()
+  initInteractiveTerminal()
   initSearch(document.getElementById('search-panel')!, handleGoToFile)
   initDebugPanel(document.getElementById('debug-panel')!, handleDebugNavigate)
   await initSettings(document.getElementById('settings-panel')!, handleSettingsChanged)
@@ -369,7 +371,32 @@ function setupKeyboardShortcuts(): void {
       e.preventDefault()
       document.getElementById('bottom-panel')?.classList.toggle('panel-collapsed')
     }
+    // Ctrl+J: Terminal
+    if (e.ctrlKey && e.key === 'j') {
+      e.preventDefault()
+      const panel = document.getElementById('bottom-panel')
+      if (panel?.classList.contains('panel-collapsed')) {
+        panel.classList.remove('panel-collapsed')
+        switchToTerminalTab()
+      } else {
+        const activeTab = document.querySelector('.panel-tab.active')
+        if (activeTab?.getAttribute('data-target') === 'terminal-content') {
+          panel?.classList.add('panel-collapsed')
+        } else {
+          switchToTerminalTab()
+        }
+      }
+    }
   })
+}
+
+function switchToTerminalTab(): void {
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'))
+  document.querySelectorAll('.panel-body').forEach(p => p.classList.remove('active'))
+  const tab = document.querySelector('[data-target="terminal-content"]')
+  tab?.classList.add('active')
+  document.getElementById('terminal-content')?.classList.add('active')
+  focusTerminal()
 }
 
 function switchActivityPanel(panel: string): void {

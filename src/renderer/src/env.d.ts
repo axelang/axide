@@ -38,6 +38,12 @@ export interface AxideAPI {
   windowMinimize(): void
   windowMaximize(): void
   windowClose(): void
+
+  terminalInit(): void
+  terminalWrite(data: string): void
+  terminalResize(cols: number, rows: number): void
+  onTerminalData(cb: (data: string) => void): () => void
+  onTerminalExit(cb: (code: number) => void): () => void
 }
 
 export interface FileEntry {

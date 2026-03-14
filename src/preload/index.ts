@@ -74,5 +74,20 @@ contextBridge.exposeInMainWorld('axide', {
   // Window
   windowMinimize: () => ipcRenderer.send('window:minimize'),
   windowMaximize: () => ipcRenderer.send('window:maximize'),
-  windowClose: () => ipcRenderer.send('window:close')
+  windowClose: () => ipcRenderer.send('window:close'),
+
+  // Terminal
+  terminalInit: () => ipcRenderer.send('terminal:init'),
+  terminalWrite: (d: string) => ipcRenderer.send('terminal:write', d),
+  terminalResize: (c: number, r: number) => ipcRenderer.send('terminal:resize', c, r),
+  onTerminalData: (cb: (d: string) => void) => {
+    const h = (_: any, d: string) => cb(d)
+    ipcRenderer.on('terminal:data', h)
+    return () => { ipcRenderer.removeListener('terminal:data', h) }
+  },
+  onTerminalExit: (cb: (code: number) => void) => {
+    const h = (_: any, code: number) => cb(code)
+    ipcRenderer.on('terminal:exit', h)
+    return () => { ipcRenderer.removeListener('terminal:exit', h) }
+  }
 })
