@@ -43,6 +43,13 @@ export function initInteractiveTerminal(): void {
     window.axide.terminalWrite(data)
   })
 
+  term.attachCustomKeyEventHandler((e) => {
+    if (e.ctrlKey && e.key === 'j' && e.type === 'keydown') {
+      return false
+    }
+    return true
+  })
+
   window.axide.onTerminalData((data) => {
     term?.write(data)
   })
