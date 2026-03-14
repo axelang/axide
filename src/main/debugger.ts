@@ -82,14 +82,16 @@ export function setupDebugHandlers(mainWindow: BrowserWindow): void {
     gdbBreakpointNumbers.clear()
     gdbReady = false
 
-    const compileProc = spawn('axe', [filePath, '-e', '--cflags', '"-g"'], {
+    const compileProc = spawn('axe', [filePath, '-e', '--cflags=-g -gdwarf-4'], {
       cwd: dirname(filePath),
       stdio: ['pipe', 'pipe', 'pipe']
     })
-
+    let compileOutput = ''
+    compileProc.stdout?.on('data', (d: Buffer) => { compileOutput += d.toString() })
+    compileProc.stderr?.on('data', (d: Buffer) => { compileOutput += d.toString() })
     compileProc.on('close', (code) => {
       if (code !== 0) {
-        mainWindow.webContents.send('debug:output', 'Compilation failed\n')
+        mainWindow.webContents.send('debug:output', 'Compilation failed: ' + code + '\nReason: ' + compileOutput)
         mainWindow.webContents.send('debug:exited')
         return
       }
