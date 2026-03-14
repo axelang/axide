@@ -5,14 +5,20 @@ export function registerAxeLanguage(): void {
 
   monaco.languages.setMonarchTokensProvider('axe', {
     keywords: [
-      'use', 'pub', 'def', 'model', 'mut', 'val', 'ref', 'if', 'elif', 'else',
-      'for', 'loop', 'return', 'break', 'continue', 'assert', 'test', 'unsafe',
-      'extern', 'opaque', 'foreign', 'platform', 'in', 'to', 'and', 'or', 'not',
-      'cast', 'addr', 'sizeof', 'str', 'import', 'print', 'println'
+      'use', 'pub', 'def', 'model', 'mut', 'val', 'if', 'elif', 'else',
+      'when', 'is', 'for', 'loop', 'switch', 'case', 'default', 'return',
+      'break', 'continue', 'defer', 'assert', 'test', 'unsafe', 'extern',
+      'opaque', 'foreign', 'platform', 'in', 'to', 'and', 'or', 'not',
+      'mod', 'enum', 'union', 'parallel', 'single',
+      'macro', 'raw', 'overload', 'list', 'put',
+    ],
+    modifiers: [
+      'ref', 'ref_of', 'addr_of', 'cast',
     ],
     typeKeywords: [
       'i8', 'i16', 'i32', 'i64', 'u8', 'u16', 'u32', 'u64',
-      'usize', 'isize', 'f32', 'f64', 'bool', 'char', 'string', 'void'
+      'usize', 'isize', 'f32', 'f64', 'bool', 'char', 'void',
+      'generic', 'untyped',
     ],
     constants: ['true', 'false', 'nil'],
     platformNames: ['windows', 'posix', 'macos', 'linux'],
@@ -22,79 +28,64 @@ export function registerAxeLanguage(): void {
       '%', '<<', '>>', '+=', '-=', '*=', '/=', '::'
     ],
     symbols: /[=><!~?:&|+\-*\/\^%]+/,
-
     tokenizer: {
       root: [
-        // doc comments
-        [/\/\/\/.*$/, 'comment.doc'],
-        // line comments
-        [/\/\/.*$/, 'comment'],
-
-        // platform keyword followed by platform name
-        [/\b(platform)\s+(windows|posix|macos|linux)\b/, ['keyword', 'keyword.platform']],
-
-        // C interop: C.function_name
+        [/\s*\/\/\/.*$/, 'comment.doc'],
+        [/\s*\/\/.*$/, 'comment'],
+        [/\bplatform\b/, 'keyword', '@platformCheck'],
         [/\bC\.[a-zA-Z_]\w*/, 'support.function'],
-
-        // function definitions
-        [/\b(def)\s+([a-zA-Z_]\w*)/, ['keyword', 'entity.name.function']],
-        // model definitions
-        [/\b(model)\s+([a-zA-Z_]\w*)/, ['keyword', 'entity.name.type']],
-
-        // use statements
-        [/\buse\b/, 'keyword'],
-        [/\bexternal\b/, 'keyword'],
-
-        // cast with type parameter: cast[Type]
-        [/\b(cast)\s*\[/, ['keyword', { token: '@brackets', next: '@castType' }]],
-
-        // identifiers and keywords
+        [/\b(?:def|macro)\b/, 'keyword', '@expectFunctionName'],
+        [/\bmodel\b/, 'keyword', '@expectTypeName'],
+        [/\b[a-z_]\w*(?=\s*\()/, 'entity.name.function.call'],
+        [/\b[A-Z][a-zA-Z0-9_]*\b/, 'entity.name.type'],
+        [/\b[A-Z_][A-Z0-9_]+\b/, 'constant'],
         [/[a-zA-Z_]\w*/, {
           cases: {
             '@keywords': 'keyword',
+            '@modifiers': 'keyword.modifier',
             '@typeKeywords': 'type',
             '@constants': 'constant',
             '@platformNames': 'keyword.platform',
             '@default': 'identifier'
           }
         }],
-
-        // strings
         [/"([^"\\]|\\.)*"/, 'string'],
-        // chars
-        [/'([^'\\]|\\.)'/, 'string.char'],
-
-        // numbers
+        [/'([^'\\]|\\.)*'/, 'string'],
+        [/`([^`\\]|\\.)*`/, 'string'],
         [/0[xX][0-9a-fA-F_]+/, 'number.hex'],
         [/0[bB][01_]+/, 'number.binary'],
-        [/[0-9]+\.[0-9]+([eE][\-+]?[0-9]+)?/, 'number.float'],
-        [/[0-9][0-9_]*/, 'number'],
-
-        // delimiters
+        [/[0-9]*\.[0-9]+([eE][+-]?[0-9]+)?/, 'number.float'],
+        [/[0-9][0-9_]*\b/, 'number'],
         [/[{}()\[\]]/, '@brackets'],
-        [/[;,.]/, 'delimiter'],
-
-        // operators
+        [/[,;]/, 'delimiter'],
         [/@symbols/, {
           cases: {
             '@operators': 'operator',
-            '@default': ''
+            '@default': 'delimiter'
           }
         }],
-
-        // whitespace
         [/[ \t\r\n]+/, 'white'],
       ],
 
-      castType: [
-        [/[a-zA-Z_]\w*/, 'type'],
-        [/\]/, { token: '@brackets', next: '@pop' }],
+      expectFunctionName: [
         [/\s+/, 'white'],
-        [/ref/, 'keyword'],
+        [/[a-zA-Z_]\w*/, { token: 'entity.name.function', next: '@pop' }],
+        [/./, { token: '', next: '@pop' }],
+      ],
+
+      expectTypeName: [
+        [/\s+/, 'white'],
+        [/[a-zA-Z_]\w*/, { token: 'entity.name.type', next: '@pop' }],
+        [/./, { token: '', next: '@pop' }],
+      ],
+
+      platformCheck: [
+        [/\s+/, 'white'],
+        [/[a-zA-Z_]\w*/, 'identifier'],
+        [/./, { token: '', next: '@pop' }],
       ],
     }
   } as any)
-
   monaco.languages.setLanguageConfiguration('axe', {
     comments: {
       lineComment: '//',
@@ -110,6 +101,7 @@ export function registerAxeLanguage(): void {
       { open: '(', close: ')' },
       { open: '"', close: '"', notIn: ['string'] },
       { open: "'", close: "'", notIn: ['string', 'comment'] },
+      { open: '`', close: '`', notIn: ['string'] },
     ],
     surroundingPairs: [
       { open: '{', close: '}' },
@@ -117,6 +109,7 @@ export function registerAxeLanguage(): void {
       { open: '(', close: ')' },
       { open: '"', close: '"' },
       { open: "'", close: "'" },
+      { open: '`', close: '`' },
     ],
     folding: {
       markers: {
@@ -136,7 +129,6 @@ export function registerAxeLanguage(): void {
     ]
   })
 
-  // Define Axide Dark theme
   monaco.editor.defineTheme('axide-dark', {
     base: 'vs-dark',
     inherit: true,
@@ -144,10 +136,10 @@ export function registerAxeLanguage(): void {
       { token: 'comment', foreground: '6b3a3a', fontStyle: 'italic' },
       { token: 'comment.doc', foreground: '7a4a4a', fontStyle: 'italic' },
       { token: 'keyword', foreground: 'e0556a' },
+      { token: 'keyword.modifier', foreground: 'bb9af7' },
       { token: 'keyword.platform', foreground: 'e0af68', fontStyle: 'bold' },
       { token: 'type', foreground: '7dcfff' },
       { token: 'string', foreground: '9ece6a' },
-      { token: 'string.char', foreground: '9ece6a' },
       { token: 'number', foreground: 'ff9e64' },
       { token: 'number.hex', foreground: 'ff9e64' },
       { token: 'number.float', foreground: 'ff9e64' },
@@ -156,6 +148,7 @@ export function registerAxeLanguage(): void {
       { token: 'operator', foreground: 'f7768e' },
       { token: 'delimiter', foreground: '6b3a3a' },
       { token: 'entity.name.function', foreground: 'f7768e' },
+      { token: 'entity.name.function.call', foreground: '7aa2f7' },
       { token: 'entity.name.type', foreground: '7dcfff', fontStyle: 'bold' },
       { token: 'support.function', foreground: '73daca', fontStyle: 'italic' },
       { token: 'identifier', foreground: 'f5c0c0' },
@@ -191,7 +184,6 @@ export function registerAxeLanguage(): void {
     }
   })
 
-  // Define Axide Light theme
   monaco.editor.defineTheme('axide-light', {
     base: 'vs',
     inherit: true,
@@ -199,6 +191,7 @@ export function registerAxeLanguage(): void {
       { token: 'comment', foreground: '9499b5', fontStyle: 'italic' },
       { token: 'comment.doc', foreground: '7a7f9a', fontStyle: 'italic' },
       { token: 'keyword', foreground: '7c3aed' },
+      { token: 'keyword.modifier', foreground: '7c3aed', fontStyle: 'italic' },
       { token: 'keyword.platform', foreground: 'b45309', fontStyle: 'bold' },
       { token: 'type', foreground: '0891b2' },
       { token: 'string', foreground: '16a34a' },
@@ -206,6 +199,7 @@ export function registerAxeLanguage(): void {
       { token: 'constant', foreground: 'ea580c' },
       { token: 'operator', foreground: '0369a1' },
       { token: 'entity.name.function', foreground: '2563eb' },
+      { token: 'entity.name.function.call', foreground: '2563eb' },
       { token: 'entity.name.type', foreground: '0891b2', fontStyle: 'bold' },
       { token: 'support.function', foreground: '0284c7', fontStyle: 'italic' },
     ],

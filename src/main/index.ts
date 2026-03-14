@@ -64,6 +64,8 @@ function createWindow(): void {
   setTimeout(() => {
     mainWindow?.show();
   }, 2000);
+
+  mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(createWindow)
