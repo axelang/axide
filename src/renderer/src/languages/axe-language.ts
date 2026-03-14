@@ -156,7 +156,7 @@ export function registerAxeLanguage(): void {
     colors: {
       'editor.background': '#0d0d0d',
       'editor.foreground': '#f5c0c0',
-      'editorCursor.foreground': '#f7768e',
+      'editorCursor.foreground': '#ffffffff',
       'editor.lineHighlightBackground': '#1a1212',
       'editor.selectionBackground': '#2a1a1a80',
       'editor.inactiveSelectionBackground': '#2a1a1a40',
