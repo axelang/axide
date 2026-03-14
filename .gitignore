@@ -4,3 +4,4 @@ node_modules
 *.exe
 *.pdb
 .DS_Store
+dist
