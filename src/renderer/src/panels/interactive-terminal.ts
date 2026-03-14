@@ -44,7 +44,7 @@ export function initInteractiveTerminal(): void {
   })
 
   term.attachCustomKeyEventHandler((e) => {
-    if (e.ctrlKey && e.key === 'j' && e.type === 'keydown') {
+    if (e.ctrlKey && (e.key === 'j' || e.key === 'p') && e.type === 'keydown') {
       return false
     }
     return true

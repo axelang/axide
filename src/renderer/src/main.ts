@@ -12,6 +12,7 @@ import { initInteractiveTerminal, focusTerminal } from './panels/interactive-ter
 import { initSearch } from './panels/search'
 import { initDebugPanel, startDebug, updateBreakpointsUI } from './panels/debugger'
 import { initSettings, getSettings } from './panels/settings'
+import { initQuickOpen, showQuickOpen } from './panels/quick-open'
 import type { Settings } from './env'
 
 async function init(): Promise<void> {
@@ -25,6 +26,7 @@ async function init(): Promise<void> {
   initSearch(document.getElementById('search-panel')!, handleGoToFile)
   initDebugPanel(document.getElementById('debug-panel')!, handleDebugNavigate)
   await initSettings(document.getElementById('settings-panel')!, handleSettingsChanged)
+  initQuickOpen(handleFileOpen)
   const settings = getSettings()
   applySettings(settings)
   if (settings.lastOpenedFolder) {
@@ -54,6 +56,10 @@ async function init(): Promise<void> {
       window.axide.debugSetAllBreakpoints(getBreakpoints())
       startDebug(fp)
     }
+  })
+
+  window.addEventListener('quick-open-request', () => {
+    showQuickOpen()
   })
 
   const editor = getEditor()
@@ -386,6 +392,11 @@ function setupKeyboardShortcuts(): void {
           switchToTerminalTab()
         }
       }
+    }
+    // Ctrl+P: Quick Open
+    if (e.ctrlKey && e.key === 'p') {
+      e.preventDefault()
+      showQuickOpen()
     }
   })
 }

@@ -105,6 +105,11 @@ export function initEditor(container: HTMLElement): monaco.editor.IStandaloneCod
     } catch { /* ignore */ }
   })
 
+  // Ctrl+P quick open
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
+    window.dispatchEvent(new CustomEvent('quick-open-request'))
+  })
+
   return editor
 }
 
