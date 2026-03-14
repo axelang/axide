@@ -2,10 +2,10 @@ import './styles/index.css'
 import { registerAxeLanguage } from './languages/axe-language'
 import {
   initEditor, openFile, switchToTab, closeTab, getActiveFilePath,
-  onTabsChanged, onCursorChanged, onFileModifiedChanged, applySettings,
+  onTabsChanged, onCursorChanged, applySettings,
   toggleBreakpoint, getEditor, type EditorTab
 } from './editor/editor'
-import { startLsp, stopLsp, notifyDocumentOpened, notifyDocumentChanged, notifyDocumentClosed, registerProviders } from './editor/lsp-client'
+import { startLsp, notifyDocumentOpened, notifyDocumentChanged, notifyDocumentClosed, registerProviders } from './editor/lsp-client'
 import { initFileExplorer, loadDirectory, setActiveFile, refreshTree, getRootPath } from './panels/file-explorer'
 import { initTerminal, runFile, stopRun } from './panels/terminal'
 import { initSearch } from './panels/search'
@@ -13,63 +13,41 @@ import { initDebugPanel, startDebug } from './panels/debugger'
 import { initSettings, getSettings } from './panels/settings'
 import type { Settings } from './env'
 
-// ── App Initialization ──
 async function init(): Promise<void> {
-  // Register Axe language
   registerAxeLanguage()
-
-  // Initialize Monaco editor
   const monacoContainer = document.getElementById('monaco-container')!
   initEditor(monacoContainer)
-
-  // Register LSP providers
   registerProviders()
-
-  // Initialize panels
   initFileExplorer(document.getElementById('file-tree')!, handleFileOpen)
   initTerminal()
   initSearch(document.getElementById('search-panel')!, handleGoToFile)
   initDebugPanel(document.getElementById('debug-panel')!, handleDebugNavigate)
   await initSettings(document.getElementById('settings-panel')!, handleSettingsChanged)
-
-  // Apply initial settings
   const settings = getSettings()
   applySettings(settings)
-
-  // Re-open last folder if available
   if (settings.lastOpenedFolder) {
     await openFolder(settings.lastOpenedFolder)
   }
-
-  // Setup tab bar
   onTabsChanged(renderTabs)
   onCursorChanged((line, col) => {
     const el = document.getElementById('status-cursor')
     if (el) el.textContent = `Ln ${line}, Col ${col}`
   })
-
-  // Setup activity bar
   setupActivityBar()
 
-  // Setup panel tabs
   setupPanelTabs()
 
-  // Setup resize handles
   setupResizeHandles()
 
-  // Setup buttons
   setupButtons()
 
-  // Setup keyboard shortcuts
   setupKeyboardShortcuts()
 
-  // Setup debug start request listener
   document.addEventListener('debug-start-request', () => {
     const fp = getActiveFilePath()
     if (fp) startDebug(fp)
   })
 
-  // Setup breakpoint click in gutter
   const editor = getEditor()
   if (editor) {
     editor.onMouseDown((e) => {
