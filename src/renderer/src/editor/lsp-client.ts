@@ -1,13 +1,12 @@
 import * as monaco from 'monaco-editor'
-import { getEditor, getActiveFilePath } from './editor'
+
+const pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: any) => void }> = new Map()
 
 let requestId = 0
-const pendingRequests: Map<number, { resolve: (v: any) => void; reject: (e: any) => void }> = new Map()
 let unsubMessage: (() => void) | null = null
 let initialized = false
 let workspaceRoot = ''
 
-// Document version tracking
 const documentVersions: Map<string, number> = new Map()
 
 export function startLsp(workspace: string): void {
@@ -16,8 +15,6 @@ export function startLsp(workspace: string): void {
 
   unsubMessage?.()
   unsubMessage = window.axide.onLspMessage(handleMessage)
-
-  // Send initialize request
   sendRequest('initialize', {
     processId: null,
     rootUri: `file:///${workspace.replace(/\\/g, '/')}`,
