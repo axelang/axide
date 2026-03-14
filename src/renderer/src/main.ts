@@ -49,7 +49,6 @@ async function init(): Promise<void> {
   document.addEventListener('debug-start-request', () => {
     const fp = getActiveFilePath()
     if (fp) {
-      // Send all current breakpoints to the main process before starting the session
       window.axide.debugSetAllBreakpoints(getBreakpoints())
       startDebug(fp)
     }
@@ -74,7 +73,6 @@ async function init(): Promise<void> {
       }
     })
 
-    // Track content changes for LSP
     editor.onDidChangeModelContent(() => {
       const fp = getActiveFilePath()
       if (fp) {
@@ -84,8 +82,6 @@ async function init(): Promise<void> {
     })
   }
 }
-
-// ── Handlers ──
 
 async function handleFileOpen(filePath: string): Promise<void> {
   const content = await window.axide.readFile(filePath)
@@ -118,13 +114,10 @@ async function openFolder(folderPath: string): Promise<void> {
   await loadDirectory(folderPath)
   startLsp(folderPath)
 
-  // Save as last opened
   const settings = getSettings()
   settings.lastOpenedFolder = folderPath
   window.axide.setSettings(settings)
 }
-
-// ── Tab Bar Rendering ──
 
 function renderTabs(tabs: EditorTab[], active: string | null): void {
   const tabBar = document.getElementById('tab-bar')!
@@ -150,8 +143,7 @@ function renderTabs(tabs: EditorTab[], active: string | null): void {
         switchToTab(tab.filePath)
         setActiveFile(tab.filePath)
       }
-      
-      // Save active tab
+
       const newActive = getActiveFilePath()
       const currentSettings = getSettings()
       if (currentSettings.lastOpenedFile !== (newActive || '')) {
@@ -160,11 +152,17 @@ function renderTabs(tabs: EditorTab[], active: string | null): void {
       }
     })
 
+    el.addEventListener('auxclick', (e) => {
+      if (e.button === 1) {
+        e.preventDefault()
+        closeTab(tab.filePath)
+        notifyDocumentClosed(tab.filePath)
+      }
+    })
+
     tabBar.appendChild(el)
   }
 }
-
-// ── Activity Bar ──
 
 function setupActivityBar(): void {
   const buttons = document.querySelectorAll('.activity-btn[data-panel]')
@@ -173,17 +171,14 @@ function setupActivityBar(): void {
       const panel = btn.getAttribute('data-panel')!
       const sidebar = document.getElementById('sidebar')!
 
-      // If clicking the already-active button, toggle sidebar
       if (btn.classList.contains('active')) {
         sidebar.classList.toggle('sidebar-visible')
         return
       }
 
-      // Switch active button
       buttons.forEach(b => b.classList.remove('active'))
       btn.classList.add('active')
 
-      // Switch panel
       document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'))
       document.getElementById(`sidebar-${panel}`)?.classList.add('active')
 
@@ -191,8 +186,6 @@ function setupActivityBar(): void {
     })
   })
 }
-
-// ── Panel Tabs ──
 
 function setupPanelTabs(): void {
   document.querySelectorAll('.panel-tab[data-target]').forEach(tab => {
@@ -209,8 +202,6 @@ function setupPanelTabs(): void {
     document.getElementById('bottom-panel')?.classList.toggle('panel-collapsed')
   })
 }
-
-// ── Resize Handles ──
 
 function setupResizeHandles(): void {
   const sidebarHandle = document.getElementById('resize-handle-sidebar')!
@@ -273,10 +264,7 @@ function setupResizeHandles(): void {
   })
 }
 
-// ── Buttons ──
-
 function setupButtons(): void {
-  // Open folder buttons
   const openFolderHandler = async () => {
     const folder = await window.axide.openFolder()
     if (folder) await openFolder(folder)
@@ -285,12 +273,10 @@ function setupButtons(): void {
   document.getElementById('btn-open-folder')?.addEventListener('click', openFolderHandler)
   document.getElementById('welcome-open-folder')?.addEventListener('click', openFolderHandler)
 
-  // New file buttons
   const newFileHandler = () => showNewFileModal()
   document.getElementById('btn-new-file')?.addEventListener('click', newFileHandler)
   document.getElementById('welcome-new-file')?.addEventListener('click', newFileHandler)
 
-  // Run buttons
   document.getElementById('btn-run')?.addEventListener('click', () => {
     const fp = getActiveFilePath()
     if (fp) runFile(fp, 'main')
@@ -301,8 +287,6 @@ function setupButtons(): void {
   })
   document.getElementById('btn-stop')?.addEventListener('click', () => stopRun())
 }
-
-// ── Modal ──
 
 function showNewFileModal(): void {
   const overlay = document.getElementById('modal-overlay')!
@@ -322,7 +306,6 @@ function showNewFileModal(): void {
     let filePath = root + sep + name
     if (!filePath.endsWith('.axe')) filePath += '.axe'
 
-    // Create with template
     const moduleName = name.replace(/\.axe$/, '').replace(/[\\/]/g, '.')
     const template = `/// ${moduleName} module\n\ndef main {\n    println("Hello from ${moduleName}!");\n}\n`
 
@@ -343,7 +326,6 @@ function closeModal(): void {
   document.getElementById('new-file-modal')!.classList.add('hidden')
 }
 
-// ── Keyboard Shortcuts ──
 
 function setupKeyboardShortcuts(): void {
   document.addEventListener('keydown', (e) => {
@@ -402,5 +384,4 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-// Start the app
 init().catch(console.error)

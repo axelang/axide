@@ -1,5 +1,5 @@
 import { appendDebugOutput, clearDebugConsole } from './terminal'
-import { getBreakpoints, removeBreakpointAt } from '../editor/editor'
+import { getBreakpoints, removeBreakpointAt, clearBreakpoints } from '../editor/editor'
 import type { DebugVariable } from '../env'
 
 let isDebugging = false
@@ -41,7 +41,12 @@ export function initDebugPanel(container: HTMLElement, navigateCb: (file: string
       </div>
     </div>
     <div class="debug-section">
-      <div class="debug-section-title">BREAKPOINTS</div>
+      <div class="debug-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>BREAKPOINTS</span>
+        <button id="dbg-clear-breakpoints" title="Clear All Breakpoints" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; display: flex;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
       <div id="debug-breakpoints" class="debug-breakpoints">
         <div style="color: var(--text-muted); font-size: 12px;">No breakpoints</div>
       </div>
@@ -59,6 +64,15 @@ export function initDebugPanel(container: HTMLElement, navigateCb: (file: string
   document.getElementById('dbg-step-in')?.addEventListener('click', () => window.axide.debugStepIn())
   document.getElementById('dbg-step-out')?.addEventListener('click', () => window.axide.debugStepOut())
   document.getElementById('dbg-stop')?.addEventListener('click', stopDebug)
+
+  document.getElementById('dbg-clear-breakpoints')?.addEventListener('click', () => {
+    const bps = getBreakpoints()
+    for (const bp of bps) {
+      window.axide.debugRemoveBreakpoint(bp.file, bp.line)
+    }
+    clearBreakpoints()
+    updateBreakpointsUI()
+  })
 
   // Subscribe to debug events
   unsubStopped?.()

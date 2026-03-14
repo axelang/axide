@@ -116,7 +116,8 @@ export function openFile(filePath: string, content: string, fileName: string): v
     return
   }
 
-  const model = monaco.editor.createModel(content, 'axe', monaco.Uri.file(filePath))
+  const language = filePath.endsWith('.axe') ? 'axe' : 'plaintext'
+  const model = monaco.editor.createModel(content, language, monaco.Uri.file(filePath))
 
   model.onDidChangeContent(() => {
     const t = tabs.get(filePath)
@@ -287,4 +288,11 @@ export function getBreakpoints(): Breakpoint[] {
     }
   }
   return result
+}
+
+export function clearBreakpoints(): void {
+  for (const lines of fileBreakpoints.values()) {
+    lines.clear()
+  }
+  applyBreakpointDecorations()
 }
