@@ -12,7 +12,8 @@ const DEFAULT_SETTINGS: Settings = {
   axelsPath: 'axels',
   axefmtPath: 'axefmt',
   gdbPath: 'gdb',
-  lastOpenedFolder: ''
+  lastOpenedFolder: '',
+  lastOpenedFile: ''
 }
 
 export async function initSettings(container: HTMLElement, changedCb: (settings: Settings) => void): Promise<void> {

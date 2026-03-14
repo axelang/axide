@@ -114,8 +114,14 @@ export function registerProviders(): void {
           position: { line: position.lineNumber - 1, character: position.column - 1 }
         })
         if (!result?.contents) return null
-        const value = typeof result.contents === 'string' ? result.contents
-          : result.contents.value || JSON.stringify(result.contents)
+        let value = ''
+        if (typeof result.contents === 'string') {
+          value = result.contents
+        } else if (Array.isArray(result.contents)) {
+          value = result.contents.map((c: any) => typeof c === 'string' ? c : c.value).join('\n---\n')
+        } else {
+          value = result.contents.value || JSON.stringify(result.contents)
+        }
         return {
           contents: [{ value }],
           range: result.range ? new monaco.Range(
@@ -231,5 +237,5 @@ function mapCompletionKind(k: number): monaco.languages.CompletionItemKind {
 }
 
 function filePathToUri(p: string): string {
-  return `file:///${p.replace(/\\/g, '/')}`
+  return monaco.Uri.file(p).toString()
 }

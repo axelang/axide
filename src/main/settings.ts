@@ -13,6 +13,7 @@ export interface Settings {
   axefmtPath: string
   gdbPath: string
   lastOpenedFolder: string
+  lastOpenedFile: string
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -24,7 +25,8 @@ const DEFAULT_SETTINGS: Settings = {
   axelsPath: 'axels',
   axefmtPath: 'axefmt',
   gdbPath: 'gdb',
-  lastOpenedFolder: ''
+  lastOpenedFolder: '',
+  lastOpenedFile: ''
 }
 
 const settingsDir = join(homedir(), '.axide')

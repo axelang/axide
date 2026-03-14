@@ -56,6 +56,7 @@ export interface Settings {
   axefmtPath: string
   gdbPath: string
   lastOpenedFolder: string
+  lastOpenedFile: string
 }
 
 export interface DebugStopEvent {

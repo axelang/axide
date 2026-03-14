@@ -150,10 +150,18 @@ export function switchToTab(filePath: string): void {
   activeTab = filePath
   notifyTabChange()
 
-  // Show monaco, hide welcome
   const monacoEl = document.getElementById('monaco-container')
   const welcomeEl = document.getElementById('welcome-screen')
-  if (monacoEl) monacoEl.classList.add('visible')
+
+  if (monacoEl && welcomeEl && !welcomeEl.classList.contains('hidden')) {
+    welcomeEl.classList.add('hidden')
+    monacoEl.classList.add('visible')
+    monacoEl.classList.remove('slide-in')
+    void monacoEl.offsetWidth
+    monacoEl.classList.add('slide-in')
+  } else if (monacoEl) {
+    monacoEl.classList.add('visible')
+  }
   if (welcomeEl) welcomeEl.classList.add('hidden')
 }
 

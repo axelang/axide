@@ -27,6 +27,9 @@ async function init(): Promise<void> {
   applySettings(settings)
   if (settings.lastOpenedFolder) {
     await openFolder(settings.lastOpenedFolder)
+    if (settings.lastOpenedFile) {
+      await handleFileOpen(settings.lastOpenedFile)
+    }
   }
   onTabsChanged(renderTabs)
   onCursorChanged((line, col) => {
@@ -141,6 +144,14 @@ function renderTabs(tabs: EditorTab[], active: string | null): void {
       } else {
         switchToTab(tab.filePath)
         setActiveFile(tab.filePath)
+      }
+      
+      // Save active tab
+      const newActive = getActiveFilePath()
+      const currentSettings = getSettings()
+      if (currentSettings.lastOpenedFile !== (newActive || '')) {
+        currentSettings.lastOpenedFile = newActive || ''
+        window.axide.setSettings(currentSettings)
       }
     })
 
