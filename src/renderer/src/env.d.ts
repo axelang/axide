@@ -4,7 +4,11 @@ export interface AxideAPI {
   readFile(path: string): Promise<string | null>
   writeFile(path: string, content: string): Promise<boolean>
   createFile(path: string, content?: string): Promise<boolean>
+  createDirectory(path: string): Promise<boolean>
   deleteFile(path: string): Promise<boolean>
+  renameFile(oldPath: string, newPath: string): Promise<boolean>
+  moveFile(srcPath: string, destDir: string): Promise<boolean>
+  showItemInFolder(path: string): Promise<boolean>
 
   formatCode(code: string, filePath: string): Promise<string>
 

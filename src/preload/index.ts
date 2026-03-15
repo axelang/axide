@@ -7,7 +7,11 @@ contextBridge.exposeInMainWorld('axide', {
   readFile: (p: string) => ipcRenderer.invoke('files:readFile', p),
   writeFile: (p: string, c: string) => ipcRenderer.invoke('files:writeFile', p, c),
   createFile: (p: string, c?: string) => ipcRenderer.invoke('files:createFile', p, c),
+  createDirectory: (p: string) => ipcRenderer.invoke('files:createDirectory', p),
   deleteFile: (p: string) => ipcRenderer.invoke('files:deleteFile', p),
+  renameFile: (oldPath: string, newPath: string) => ipcRenderer.invoke('files:rename', oldPath, newPath),
+  moveFile: (srcPath: string, destDir: string) => ipcRenderer.invoke('files:move', srcPath, destDir),
+  showItemInFolder: (p: string) => ipcRenderer.invoke('files:showItemInFolder', p),
 
   // Format
   formatCode: (code: string, filePath: string) => ipcRenderer.invoke('format:code', code, filePath),

@@ -1,5 +1,5 @@
-import { ipcMain, BrowserWindow } from 'electron'
-import { readdir, readFile, writeFile, mkdir, unlink } from 'fs/promises'
+import { ipcMain, BrowserWindow, shell } from 'electron'
+import { readdir, readFile, writeFile, mkdir, unlink, rename, rm } from 'fs/promises'
 import { join } from 'path'
 
 export interface FileEntry {
@@ -55,8 +55,38 @@ export function setupFileHandlers(_mainWindow: BrowserWindow): void {
     } catch { return false }
   })
 
+  ipcMain.handle('files:createDirectory', async (_, dirPath: string) => {
+    try {
+      await mkdir(dirPath, { recursive: true })
+      return true
+    } catch { return false }
+  })
+
   ipcMain.handle('files:deleteFile', async (_, filePath: string) => {
-    try { await unlink(filePath); return true }
-    catch { return false }
+    try {
+      await rm(filePath, { recursive: true, force: true })
+      return true
+    } catch { return false }
+  })
+
+  ipcMain.handle('files:rename', async (_, oldPath: string, newPath: string) => {
+    try {
+      await rename(oldPath, newPath)
+      return true
+    } catch { return false }
+  })
+
+  ipcMain.handle('files:move', async (_, srcPath: string, destDir: string) => {
+    try {
+      const fileName = srcPath.split(/[/\\]/).pop()
+      if (!fileName) return false
+      await rename(srcPath, join(destDir, fileName))
+      return true
+    } catch { return false }
+  })
+
+  ipcMain.handle('files:showItemInFolder', async (_, filePath: string) => {
+    shell.showItemInFolder(filePath)
+    return true
   })
 }
