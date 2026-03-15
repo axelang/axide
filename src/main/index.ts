@@ -40,7 +40,7 @@ function createWindow(): void {
   setupDebugHandlers(mainWindow)
   setupSettingsHandlers()
   setupTerminalHandlers(mainWindow)
- 
+
   mainWindow.webContents.on('before-input-event', (event, input) => {
     const isCmdOrCtrl = process.platform === 'darwin' ? input.meta : input.control
     if (isCmdOrCtrl && !input.shift && !input.alt && input.key.toLowerCase() === 'w') {
