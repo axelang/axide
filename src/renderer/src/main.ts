@@ -430,6 +430,11 @@ function setupKeyboardShortcuts(): void {
         editor.focus()
       }
     }
+    // Ctrl+B: Toggle sidebar
+    if (e.ctrlKey && e.key === 'b') {
+      e.preventDefault()
+      document.getElementById('sidebar')?.classList.toggle('sidebar-visible')
+    }
     // Ctrl+W: Close tab
     const isCmdOrCtrl = navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? e.metaKey : e.ctrlKey
     if (isCmdOrCtrl && e.key.toLowerCase() === 'w') {
