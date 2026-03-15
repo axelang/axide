@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { spawn, ChildProcess } from 'child_process'
-import { dirname } from 'path'
+import { dirname, basename } from 'path'
 
 let runProcess: ChildProcess | null = null
 
@@ -9,7 +9,7 @@ export function setupRunnerHandlers(mainWindow: BrowserWindow): void {
     if (runProcess) { runProcess.kill(); runProcess = null }
 
     try {
-      runProcess = spawn('axe', [filePath, '-r', '-q'], {
+      runProcess = spawn('axe', [basename(filePath), '-r', '-q'], {
         cwd: dirname(filePath),
         stdio: ['pipe', 'pipe', 'pipe']
       })

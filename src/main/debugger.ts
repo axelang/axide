@@ -82,7 +82,7 @@ export function setupDebugHandlers(mainWindow: BrowserWindow): void {
     gdbBreakpointNumbers.clear()
     gdbReady = false
 
-    const compileProc = spawn('axe', [filePath, '-e', '--cflags=-g -gdwarf-4'], {
+    const compileProc = spawn('axe', [basename(filePath), '-e', '--cflags=-g -gdwarf-4'], {
       cwd: dirname(filePath),
       stdio: ['pipe', 'pipe', 'pipe']
     })
@@ -100,7 +100,7 @@ export function setupDebugHandlers(mainWindow: BrowserWindow): void {
       const exePath = dirname(filePath) + '/' + exeName
 
       loadSettings().then(settings => {
-        gdbProcess = spawn(settings.gdbPath, ['--interpreter=mi', exePath], {
+        gdbProcess = spawn(settings.gdbPath, ['--interpreter=mi', './' + exeName], {
           cwd: dirname(filePath),
           stdio: ['pipe', 'pipe', 'pipe']
         })
