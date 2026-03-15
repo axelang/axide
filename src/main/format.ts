@@ -2,10 +2,10 @@ import { ipcMain } from 'electron'
 import { spawn } from 'child_process'
 
 export function setupFormatHandlers(): void {
-  ipcMain.handle('format:code', async (_, code: string, _filePath: string) => {
+  ipcMain.handle('format:code', async (_, code: string, filePath: string) => {
     return new Promise<string>((resolve) => {
       try {
-        const proc = spawn('axefmt', [], { stdio: ['pipe', 'pipe', 'pipe'] })
+        const proc = spawn('axefmt', ['--stdio', filePath], { stdio: ['pipe', 'pipe', 'pipe'] })
         let stdout = ''
         let stderr = ''
 
