@@ -24,6 +24,7 @@ export function startLsp(workspace: string): void {
         completion: { completionItem: { snippetSupport: false } },
         hover: { contentFormat: ['plaintext'] },
         definition: {},
+        documentSymbol: {},
         publishDiagnostics: {},
       }
     }
@@ -154,6 +155,19 @@ export function registerProviders(): void {
       } catch { return null }
     }
   })
+}
+
+export async function getDocumentSymbols(filePath: string): Promise<any[]> {
+  if (!initialized) return []
+  try {
+    const result = await sendRequest('textDocument/documentSymbol', {
+      textDocument: { uri: filePathToUri(filePath) }
+    })
+    return Array.isArray(result) ? result : []
+  } catch (err) {
+    console.error('Failed to get document symbols:', err)
+    return []
+  }
 }
 
 // ── Internal helpers ──

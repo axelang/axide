@@ -75,6 +75,11 @@ contextBridge.exposeInMainWorld('axide', {
   windowMinimize: () => ipcRenderer.send('window:minimize'),
   windowMaximize: () => ipcRenderer.send('window:maximize'),
   windowClose: () => ipcRenderer.send('window:close'),
+  onMenuCloseTab: (cb: () => void) => {
+    const h = () => cb()
+    ipcRenderer.on('menu:close-tab', h)
+    return () => { ipcRenderer.removeListener('menu:close-tab', h) }
+  },
 
   // Terminal
   terminalInit: () => ipcRenderer.send('terminal:init'),

@@ -38,6 +38,7 @@ export interface AxideAPI {
   windowMinimize(): void
   windowMaximize(): void
   windowClose(): void
+  onMenuCloseTab(cb: () => void): () => void
 
   terminalInit(): void
   terminalWrite(data: string): void

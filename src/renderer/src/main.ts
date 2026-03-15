@@ -13,6 +13,7 @@ import { initSearch } from './panels/search'
 import { initDebugPanel, startDebug, updateBreakpointsUI } from './panels/debugger'
 import { initSettings, getSettings } from './panels/settings'
 import { initQuickOpen, showQuickOpen } from './panels/quick-open'
+import { initSymbolPicker, showSymbolPicker } from './panels/symbol-picker'
 import type { Settings } from './env'
 
 async function init(): Promise<void> {
@@ -27,6 +28,7 @@ async function init(): Promise<void> {
   initDebugPanel(document.getElementById('debug-panel')!, handleDebugNavigate)
   await initSettings(document.getElementById('settings-panel')!, handleSettingsChanged)
   initQuickOpen(handleFileOpen)
+  initSymbolPicker(handleSymbolSelect)
   const settings = getSettings()
   applySettings(settings)
   if (settings.lastOpenedFolder) {
@@ -60,6 +62,14 @@ async function init(): Promise<void> {
 
   window.addEventListener('quick-open-request', () => {
     showQuickOpen()
+  })
+ 
+  window.axide.onMenuCloseTab(() => {
+    const fp = getActiveFilePath()
+    if (fp) {
+      closeTab(fp)
+      notifyDocumentClosed(fp)
+    }
   })
 
   const editor = getEditor()
@@ -112,6 +122,15 @@ async function handleGoToFile(file: string, line: number, col: number): Promise<
 
 function handleDebugNavigate(file: string, line: number): void {
   handleGoToFile(file, line, 1)
+}
+
+function handleSymbolSelect(line: number, col: number): void {
+  const editor = getEditor()
+  if (editor) {
+    editor.setPosition({ lineNumber: line, column: col })
+    editor.revealLineInCenter(line)
+    editor.focus()
+  }
 }
 
 function handleSettingsChanged(settings: Settings): void {
@@ -397,6 +416,29 @@ function setupKeyboardShortcuts(): void {
     if (e.ctrlKey && e.key === 'p') {
       e.preventDefault()
       showQuickOpen()
+    }
+    // Ctrl+Shift+O: Symbol Picker
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o') {
+      e.preventDefault()
+      showSymbolPicker()
+    }
+    // Ctrl+;: Focus Editor
+    if (e.ctrlKey && e.key === ';') {
+      e.preventDefault()
+      const editor = getEditor()
+      if (editor) {
+        editor.focus()
+      }
+    }
+    // Ctrl+W: Close tab
+    const isCmdOrCtrl = navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? e.metaKey : e.ctrlKey
+    if (isCmdOrCtrl && e.key.toLowerCase() === 'w') {
+      e.preventDefault()
+      const fp = getActiveFilePath()
+      if (fp) {
+        closeTab(fp)
+        notifyDocumentClosed(fp)
+      }
     }
   })
 }

@@ -188,12 +188,17 @@ export function closeTab(filePath: string): void {
     } else {
       activeTab = null
       editor?.setModel(null)
-      // Show welcome, hide monaco
-      const monacoEl = document.getElementById('monaco-container')
-      const welcomeEl = document.getElementById('welcome-screen')
-      if (monacoEl) monacoEl.classList.remove('visible')
-      if (welcomeEl) welcomeEl.classList.remove('hidden')
     }
+  }
+ 
+  if (tabs.size === 0) {
+    activeTab = null
+    editor?.setModel(null)
+    // Show welcome, hide monaco
+    const monacoEl = document.getElementById('monaco-container')
+    const welcomeEl = document.getElementById('welcome-screen')
+    if (monacoEl) monacoEl.classList.remove('visible')
+    if (welcomeEl) welcomeEl.classList.remove('hidden')
   }
   notifyTabChange()
 }
