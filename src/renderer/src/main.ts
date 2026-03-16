@@ -451,7 +451,7 @@ function showCreateItemModal(options: { type: 'file' | 'directory', suffix?: str
       let template = '';
       if (suffix === '.axe') {
         const moduleName = name.replace(/\.axe$/, "").replace(/[\\/]/g, ".");
-        template = `use std.io;\npub def ${moduleName}() {\n    println("Hello from ${moduleName}!");\n}\n`;
+        template = `use std.io;\n\npub def ${moduleName}() {\n    println("Hello from ${moduleName}!");\n}\n`;
       }
 
       await window.axide.createFile(filePath, template);
