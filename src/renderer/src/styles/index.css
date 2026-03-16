@@ -141,6 +141,11 @@ body {
   object-fit: contain;
 }
 
+/* Hide titlebar logo on macOS to avoid overlap with traffic light controls */
+.platform-mac .titlebar-logo {
+  display: none;
+}
+
 .titlebar-title {
   font-size: 12px;
   font-weight: 600;

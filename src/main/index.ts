@@ -11,6 +11,7 @@ import { setupTerminalHandlers } from './terminal'
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
+  const isMac = process.platform === 'darwin'
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -19,8 +20,8 @@ function createWindow(): void {
     show: false,
     backgroundColor: '#1a1b26',
     paintWhenInitiallyHidden: false,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
+    titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
+    titleBarOverlay: isMac ? false : {
       color: '#0f0f0f',
       symbolColor: '#eee5e5ff',
       height: 38
