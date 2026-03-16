@@ -203,21 +203,21 @@ function showContextMenu(x: number, y: number, entry: FileEntry | null) {
       contextMenu.appendChild(separator)
 
       addContextItem(contextMenu, 'New .axe File', () => {
-        document.dispatchEvent(new CustomEvent('request-new-file', { detail: { parentDir: entry.path } }))
+        document.dispatchEvent(new CustomEvent('request-new-item', { detail: { type: 'file', suffix: '.axe', parentDir: entry.path } }))
       })
       addContextItem(contextMenu, 'New Folder', () => {
-        createNewItem('directory', '', entry.path)
+        document.dispatchEvent(new CustomEvent('request-new-item', { detail: { type: 'directory', parentDir: entry.path } }))
       })
     }
   } else {
     addContextItem(contextMenu, 'New .axe File', () => {
-      document.dispatchEvent(new CustomEvent('request-new-file'))
+      document.dispatchEvent(new CustomEvent('request-new-item', { detail: { type: 'file', suffix: '.axe' } }))
     })
     addContextItem(contextMenu, 'New Folder', () => {
-      createNewItem('directory')
+      document.dispatchEvent(new CustomEvent('request-new-item', { detail: { type: 'directory' } }))
     })
     addContextItem(contextMenu, 'New Empty File', () => {
-      createNewItem('file', '')
+      document.dispatchEvent(new CustomEvent('request-new-item', { detail: { type: 'file' } }))
     })
   }
 
@@ -301,40 +301,6 @@ async function startRename(entry: FileEntry) {
   input.onblur = () => finishRename(true)
 }
 
-async function createNewItem(type: 'file' | 'directory', suffix: string = '', parentDir: string = rootPath) {
-  if (!parentDir) {
-    alert('Please open a folder first.')
-    return
-  }
-
-  const defaultName = type === 'file' ? `new_file${suffix}` : 'new_folder'
-  const name = prompt(`Enter ${type} name:`, defaultName)
-  if (!name) return
-
-  let finalName = name.trim()
-  if (type === 'file' && suffix && !finalName.toLowerCase().endsWith(suffix.toLowerCase())) {
-    finalName += suffix
-  }
-
-  const separator = parentDir.includes('\\') ? '\\' : '/'
-  const fullPath = parentDir.endsWith(separator) ? parentDir + finalName : parentDir + separator + finalName
-
-  let success = false
-  if (type === 'file') {
-    success = await window.axide.createFile(fullPath)
-  } else {
-    success = await window.axide.createDirectory(fullPath)
-  }
-
-  if (success) {
-    await refreshTree()
-    if (type === 'file') {
-      onFileSelected?.(fullPath)
-    }
-  } else {
-    alert(`Failed to create ${type}. Check if it already exists.`)
-  }
-}
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')

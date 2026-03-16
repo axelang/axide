@@ -94,8 +94,8 @@ async function init(): Promise<void> {
     }
   });
 
-  document.addEventListener("request-new-file", (e: any) => {
-    showNewFileModal(e.detail?.parentDir);
+  document.addEventListener("request-new-item", (e: any) => {
+    showCreateItemModal(e.detail);
   });
 
   window.addEventListener("quick-open-request", () => {
@@ -380,7 +380,7 @@ function setupButtons(): void {
     .getElementById("welcome-open-folder")
     ?.addEventListener("click", openFolderHandler);
 
-  const newFileHandler = () => showNewFileModal();
+  const newFileHandler = () => showCreateItemModal({ type: 'file', suffix: '.axe' });
   document
     .getElementById("btn-new-file")
     ?.addEventListener("click", newFileHandler);
@@ -411,12 +411,27 @@ function setupButtons(): void {
   });
 }
 
-function showNewFileModal(parentDir?: string): void {
+function showCreateItemModal(options: { type: 'file' | 'directory', suffix?: string, parentDir?: string }): void {
+  const { type, suffix = '', parentDir } = options;
   const overlay = document.getElementById("modal-overlay")!;
   const modal = document.getElementById("new-file-modal")!;
+  const title = modal.querySelector('h3')!;
   const input = document.getElementById("new-file-name") as HTMLInputElement;
+  const hint = modal.querySelector('.modal-hint') as HTMLElement;
+
   overlay.classList.remove("hidden");
   modal.classList.remove("hidden");
+
+  if (type === 'file') {
+    title.textContent = suffix === '.axe' ? 'New Axe File' : 'New File';
+    input.placeholder = suffix === '.axe' ? 'filename.axe' : 'filename.ext';
+    hint.style.display = 'block';
+  } else {
+    title.textContent = 'New Folder';
+    input.placeholder = 'folder_name';
+    hint.style.display = 'none';
+  }
+
   input.value = "";
   input.focus();
 
@@ -427,14 +442,25 @@ function showNewFileModal(parentDir?: string): void {
     if (!root) return;
     const sep = root.includes("/") ? "/" : "\\";
     let filePath = root.endsWith(sep) ? root + name : root + sep + name;
-    if (!filePath.endsWith(".axe")) filePath += ".axe";
 
-    const moduleName = name.replace(/\.axe$/, "").replace(/[\\/]/g, ".");
-    const template = `/// ${moduleName} module\n\ndef main {\n    println("Hello from ${moduleName}!");\n}\n`;
+    if (type === 'file') {
+      if (suffix && !filePath.toLowerCase().endsWith(suffix.toLowerCase())) {
+        filePath += suffix;
+      }
 
-    await window.axide.createFile(filePath, template);
-    await refreshTree();
-    await handleFileOpen(filePath);
+      let template = '';
+      if (suffix === '.axe') {
+        const moduleName = name.replace(/\.axe$/, "").replace(/[\\/]/g, ".");
+        template = `use std.io;\ndef ${moduleName}() {\n    println("Hello from ${moduleName}!");\n}\n`;
+      }
+
+      await window.axide.createFile(filePath, template);
+      await refreshTree();
+      await handleFileOpen(filePath);
+    } else {
+      await window.axide.createDirectory(filePath);
+      await refreshTree();
+    }
     closeModal();
   };
 
