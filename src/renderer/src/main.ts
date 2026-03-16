@@ -94,6 +94,10 @@ async function init(): Promise<void> {
     }
   });
 
+  document.addEventListener("request-new-file", (e: any) => {
+    showNewFileModal(e.detail?.parentDir);
+  });
+
   window.addEventListener("quick-open-request", () => {
     showQuickOpen();
   });
@@ -407,7 +411,7 @@ function setupButtons(): void {
   });
 }
 
-function showNewFileModal(): void {
+function showNewFileModal(parentDir?: string): void {
   const overlay = document.getElementById("modal-overlay")!;
   const modal = document.getElementById("new-file-modal")!;
   const input = document.getElementById("new-file-name") as HTMLInputElement;
@@ -419,10 +423,10 @@ function showNewFileModal(): void {
   const create = async () => {
     const name = input.value.trim();
     if (!name) return;
-    const root = getRootPath();
+    const root = parentDir || getRootPath();
     if (!root) return;
     const sep = root.includes("/") ? "/" : "\\";
-    let filePath = root + sep + name;
+    let filePath = root.endsWith(sep) ? root + name : root + sep + name;
     if (!filePath.endsWith(".axe")) filePath += ".axe";
 
     const moduleName = name.replace(/\.axe$/, "").replace(/[\\/]/g, ".");

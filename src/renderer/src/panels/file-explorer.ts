@@ -203,7 +203,7 @@ function showContextMenu(x: number, y: number, entry: FileEntry | null) {
       contextMenu.appendChild(separator)
 
       addContextItem(contextMenu, 'New .axe File', () => {
-        createNewItem('file', '.axe', entry.path)
+        document.dispatchEvent(new CustomEvent('request-new-file', { detail: { parentDir: entry.path } }))
       })
       addContextItem(contextMenu, 'New Folder', () => {
         createNewItem('directory', '', entry.path)
@@ -211,7 +211,7 @@ function showContextMenu(x: number, y: number, entry: FileEntry | null) {
     }
   } else {
     addContextItem(contextMenu, 'New .axe File', () => {
-      createNewItem('file', '.axe')
+      document.dispatchEvent(new CustomEvent('request-new-file'))
     })
     addContextItem(contextMenu, 'New Folder', () => {
       createNewItem('directory')
