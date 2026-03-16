@@ -7,7 +7,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "fix": "electron-rebuild"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
