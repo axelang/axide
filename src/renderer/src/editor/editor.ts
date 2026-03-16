@@ -34,7 +34,7 @@ export function initEditor(container: HTMLElement): monaco.editor.IStandaloneCod
   editor = monaco.editor.create(container, {
     language: 'axe',
     theme: 'axide-dark',
-    fontFamily: "'JetBrains Mono', 'Consolas', 'Courier New', monospace",
+    fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace",
     fontSize: 14,
     lineHeight: 22,
     tabSize: 4,

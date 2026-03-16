@@ -25,7 +25,7 @@ export function initInteractiveTerminal(): void {
       cyan: '#7dcfff',
       white: '#a9b1d6'
     },
-    fontFamily: "'JetBrains Mono', 'Consolas', 'Courier New', monospace",
+    fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace",
     fontSize: 14,
     cursorBlink: true,
     allowProposedApi: true
