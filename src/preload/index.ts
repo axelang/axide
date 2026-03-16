@@ -3,8 +3,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 contextBridge.exposeInMainWorld('axide', {
   // File system
   openFolder: () => ipcRenderer.invoke('dialog:openFolder'),
-  readDirectory: (p: string) => ipcRenderer.invoke('files:readDirectory', p),
+  readDirectory: (p: string, showGitignored?: boolean) => ipcRenderer.invoke('files:readDirectory', p, showGitignored ?? true),
   readFile: (p: string) => ipcRenderer.invoke('files:readFile', p),
+  isBinary: (p: string) => ipcRenderer.invoke('files:isBinary', p),
   writeFile: (p: string, c: string) => ipcRenderer.invoke('files:writeFile', p, c),
   createFile: (p: string, c?: string) => ipcRenderer.invoke('files:createFile', p, c),
   createDirectory: (p: string) => ipcRenderer.invoke('files:createDirectory', p),

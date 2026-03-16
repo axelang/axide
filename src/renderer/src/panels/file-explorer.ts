@@ -4,6 +4,7 @@ let rootPath = ''
 let onFileSelected: ((path: string) => void) | null = null
 let currentActive = ''
 let contextMenu: HTMLElement | null = null
+let showGitignored = true
 
 export function initFileExplorer(container: HTMLElement, fileSelectedCb: (path: string) => void): void {
   onFileSelected = fileSelectedCb
@@ -28,7 +29,7 @@ export function initFileExplorer(container: HTMLElement, fileSelectedCb: (path: 
 
 export async function loadDirectory(dirPath: string): Promise<void> {
   rootPath = dirPath
-  const tree = await window.axide.readDirectory(dirPath)
+  const tree = await window.axide.readDirectory(dirPath, showGitignored)
   const container = document.getElementById('file-tree')
   if (!container) return
   container.innerHTML = ''
@@ -47,6 +48,23 @@ export async function refreshTree(): Promise<void> {
 }
 
 export function getRootPath(): string { return rootPath }
+
+export async function toggleGitignored(): Promise<void> {
+  showGitignored = !showGitignored
+  const visibleIcon = document.getElementById('gitignore-icon-visible')
+  const hiddenIcon = document.getElementById('gitignore-icon-hidden')
+  const btn = document.getElementById('btn-toggle-gitignored')
+  if (showGitignored) {
+    if (visibleIcon) visibleIcon.style.display = ''
+    if (hiddenIcon) hiddenIcon.style.display = 'none'
+    btn?.classList.remove('active')
+  } else {
+    if (visibleIcon) visibleIcon.style.display = 'none'
+    if (hiddenIcon) hiddenIcon.style.display = ''
+    btn?.classList.add('active')
+  }
+  await refreshTree()
+}
 
 function renderTree(entries: FileEntry[], parent: HTMLElement, depth: number): void {
   for (const entry of entries) {

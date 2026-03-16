@@ -27,6 +27,7 @@ import {
   setActiveFile,
   refreshTree,
   getRootPath,
+  toggleGitignored,
 } from "./panels/file-explorer";
 import { initTerminal, runFile, stopRun } from "./panels/terminal";
 import {
@@ -134,13 +135,39 @@ async function init(): Promise<void> {
   }
 }
 
-async function handleFileOpen(filePath: string): Promise<void> {
+let currentBinaryFile: string | null = null;
+
+async function handleFileOpen(filePath: string, forceTextContent: boolean = false): Promise<void> {
+  const isBinary = await window.axide.isBinary(filePath);
+
+  const binaryScreen = document.getElementById("binary-file-screen");
+  const monacoContainer = document.getElementById("monaco-container");
+  const welcomeScreen = document.getElementById("welcome-screen");
+
+  if (isBinary && !forceTextContent) {
+    currentBinaryFile = filePath;
+    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+
+    if (welcomeScreen) welcomeScreen.classList.add("hidden");
+    if (monacoContainer) monacoContainer.classList.remove("visible");
+    if (binaryScreen) binaryScreen.classList.remove("hidden");
+
+    const nameEl = document.getElementById("binary-file-name");
+    if (nameEl) nameEl.textContent = fileName;
+
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    setActiveFile(filePath);
+    return;
+  }
+
   const content = await window.axide.readFile(filePath);
   if (content === null) return;
   const fileName = filePath.split(/[\\/]/).pop() || filePath;
   openFile(filePath, content, fileName);
   setActiveFile(filePath);
   notifyDocumentOpened(filePath, content);
+
+  if (binaryScreen) binaryScreen.classList.add("hidden");
 }
 
 async function handleGoToFile(
@@ -368,6 +395,16 @@ function setupButtons(): void {
   document
     .getElementById("btn-stop")
     ?.addEventListener("click", () => stopRun());
+
+  document.getElementById("btn-view-binary")?.addEventListener("click", () => {
+    if (currentBinaryFile) {
+      handleFileOpen(currentBinaryFile, true);
+    }
+  });
+
+  document.getElementById("btn-toggle-gitignored")?.addEventListener("click", () => {
+    toggleGitignored();
+  });
 }
 
 function showNewFileModal(): void {

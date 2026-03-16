@@ -1,7 +1,8 @@
 export interface AxideAPI {
   openFolder(): Promise<string | null>
-  readDirectory(path: string): Promise<FileEntry[]>
+  readDirectory(path: string, showGitignored?: boolean): Promise<FileEntry[]>
   readFile(path: string): Promise<string | null>
+  isBinary(path: string): Promise<boolean>
   writeFile(path: string, content: string): Promise<boolean>
   createFile(path: string, content?: string): Promise<boolean>
   createDirectory(path: string): Promise<boolean>
