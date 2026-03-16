@@ -1,7 +1,6 @@
 import * as monaco from 'monaco-editor'
 import type { Settings } from '../env'
 
-// Configure Monaco workers
 self.MonacoEnvironment = {
   getWorker(_: any, _label: string) {
     return new Worker(
@@ -17,6 +16,8 @@ export interface EditorTab {
   model: monaco.editor.ITextModel
   viewState: monaco.editor.ICodeEditorViewState | null
   modified: boolean
+  breakpointDecoIds: string[]
+  breakpoints: Set<number>
 }
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null
@@ -134,7 +135,15 @@ export function openFile(filePath: string, content: string, fileName: string): v
     }
   })
 
-  tab = { filePath, fileName, model, viewState: null, modified: false }
+  tab = {
+    filePath,
+    fileName,
+    model,
+    viewState: null,
+    modified: false,
+    breakpointDecoIds: [],
+    breakpoints: new Set()
+  }
   tabs.set(filePath, tab)
   switchToTab(filePath)
 }
@@ -155,7 +164,6 @@ export function switchToTab(filePath: string): void {
   if (tab.viewState) editor.restoreViewState(tab.viewState)
   editor.focus()
   activeTab = filePath
-  currentBreakpointDecoIds = [] // Reset deco tracking for new tab
   applyBreakpointDecorations()
   notifyTabChange()
 
@@ -190,7 +198,7 @@ export function closeTab(filePath: string): void {
       editor?.setModel(null)
     }
   }
- 
+
   if (tabs.size === 0) {
     activeTab = null
     editor?.setModel(null)
@@ -240,18 +248,12 @@ function notifyTabChange(): void {
   onTabChange?.(Array.from(tabs.values()), activeTab)
 }
 
-// Breakpoint support — track line numbers per file for persistence
-const fileBreakpoints: Map<string, Set<number>> = new Map()
-let currentBreakpointDecoIds: string[] = []
-
 function applyBreakpointDecorations(): void {
   if (!editor || !activeTab) return
-  const lines = fileBreakpoints.get(activeTab)
-  if (!lines || lines.size === 0) {
-    currentBreakpointDecoIds = editor.deltaDecorations(currentBreakpointDecoIds, [])
-    return
-  }
-  const decos = Array.from(lines).map(lineNumber => ({
+  const tab = tabs.get(activeTab)
+  if (!tab) return
+
+  const decos = Array.from(tab.breakpoints).map(lineNumber => ({
     range: new monaco.Range(lineNumber, 1, lineNumber, 1),
     options: {
       glyphMarginClassName: 'breakpoint-glyph',
@@ -260,32 +262,29 @@ function applyBreakpointDecorations(): void {
       stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
     }
   }))
-  currentBreakpointDecoIds = editor.deltaDecorations(currentBreakpointDecoIds, decos)
+
+  tab.breakpointDecoIds = editor.deltaDecorations(tab.breakpointDecoIds, decos)
 }
 
 export function toggleBreakpoint(lineNumber: number): { file: string; line: number; added: boolean } | null {
   if (!editor || !activeTab) return null
+  const tab = tabs.get(activeTab)
+  if (!tab) return null
 
-  let lines = fileBreakpoints.get(activeTab)
-  if (!lines) {
-    lines = new Set()
-    fileBreakpoints.set(activeTab, lines)
-  }
-
-  const added = !lines.has(lineNumber)
+  const added = !tab.breakpoints.has(lineNumber)
   if (added) {
-    lines.add(lineNumber)
+    tab.breakpoints.add(lineNumber)
   } else {
-    lines.delete(lineNumber)
+    tab.breakpoints.delete(lineNumber)
   }
   applyBreakpointDecorations()
   return { file: activeTab, line: lineNumber, added }
 }
 
 export function removeBreakpointAt(file: string, line: number): void {
-  const lines = fileBreakpoints.get(file)
-  if (!lines) return
-  lines.delete(line)
+  const tab = tabs.get(file)
+  if (!tab) return
+  tab.breakpoints.delete(line)
   if (file === activeTab) applyBreakpointDecorations()
 }
 
@@ -293,8 +292,8 @@ export interface Breakpoint { file: string; line: number }
 
 export function getBreakpoints(): Breakpoint[] {
   const result: Breakpoint[] = []
-  for (const [file, lines] of fileBreakpoints) {
-    for (const line of lines) {
+  for (const [file, tab] of tabs) {
+    for (const line of tab.breakpoints) {
       result.push({ file, line })
     }
   }
@@ -302,8 +301,8 @@ export function getBreakpoints(): Breakpoint[] {
 }
 
 export function clearBreakpoints(): void {
-  for (const lines of fileBreakpoints.values()) {
-    lines.clear()
+  for (const tab of tabs.values()) {
+    tab.breakpoints.clear()
   }
   applyBreakpointDecorations()
 }
