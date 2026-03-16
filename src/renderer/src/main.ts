@@ -141,7 +141,10 @@ async function init(): Promise<void> {
 
 let currentBinaryFile: string | null = null;
 
-async function handleFileOpen(filePath: string, forceTextContent: boolean = false): Promise<void> {
+async function handleFileOpen(
+  filePath: string,
+  forceTextContent: boolean = false,
+): Promise<void> {
   const isBinary = await window.axide.isBinary(filePath);
 
   const binaryScreen = document.getElementById("binary-file-screen");
@@ -159,7 +162,9 @@ async function handleFileOpen(filePath: string, forceTextContent: boolean = fals
     const nameEl = document.getElementById("binary-file-name");
     if (nameEl) nameEl.textContent = fileName;
 
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document
+      .querySelectorAll(".tab")
+      .forEach((t) => t.classList.remove("active"));
     setActiveFile(filePath);
     return;
   }
@@ -380,7 +385,8 @@ function setupButtons(): void {
     .getElementById("welcome-open-folder")
     ?.addEventListener("click", openFolderHandler);
 
-  const newFileHandler = () => showCreateItemModal({ type: 'file', suffix: '.axe' });
+  const newFileHandler = () =>
+    showCreateItemModal({ type: "file", suffix: ".axe" });
   document
     .getElementById("btn-new-file")
     ?.addEventListener("click", newFileHandler);
@@ -406,30 +412,36 @@ function setupButtons(): void {
     }
   });
 
-  document.getElementById("btn-toggle-gitignored")?.addEventListener("click", () => {
-    toggleGitignored();
-  });
+  document
+    .getElementById("btn-toggle-gitignored")
+    ?.addEventListener("click", () => {
+      toggleGitignored();
+    });
 }
 
-function showCreateItemModal(options: { type: 'file' | 'directory', suffix?: string, parentDir?: string }): void {
-  const { type, suffix = '', parentDir } = options;
+function showCreateItemModal(options: {
+  type: "file" | "directory";
+  suffix?: string;
+  parentDir?: string;
+}): void {
+  const { type, suffix = "", parentDir } = options;
   const overlay = document.getElementById("modal-overlay")!;
   const modal = document.getElementById("new-file-modal")!;
-  const title = modal.querySelector('h3')!;
+  const title = modal.querySelector("h3")!;
   const input = document.getElementById("new-file-name") as HTMLInputElement;
-  const hint = modal.querySelector('.modal-hint') as HTMLElement;
+  const hint = modal.querySelector(".modal-hint") as HTMLElement;
 
   overlay.classList.remove("hidden");
   modal.classList.remove("hidden");
 
-  if (type === 'file') {
-    title.textContent = suffix === '.axe' ? 'New Axe File' : 'New File';
-    input.placeholder = suffix === '.axe' ? 'filename.axe' : 'filename.ext';
-    hint.style.display = 'block';
+  if (type === "file") {
+    title.textContent = suffix === ".axe" ? "New Axe File" : "New File";
+    input.placeholder = suffix === ".axe" ? "filename.axe" : "filename.ext";
+    hint.style.display = "block";
   } else {
-    title.textContent = 'New Folder';
-    input.placeholder = 'folder_name';
-    hint.style.display = 'none';
+    title.textContent = "New Folder";
+    input.placeholder = "folder_name";
+    hint.style.display = "none";
   }
 
   input.value = "";
@@ -443,13 +455,13 @@ function showCreateItemModal(options: { type: 'file' | 'directory', suffix?: str
     const sep = root.includes("/") ? "/" : "\\";
     let filePath = root.endsWith(sep) ? root + name : root + sep + name;
 
-    if (type === 'file') {
+    if (type === "file") {
       if (suffix && !filePath.toLowerCase().endsWith(suffix.toLowerCase())) {
         filePath += suffix;
       }
 
-      let template = '';
-      if (suffix === '.axe') {
+      let template = "";
+      if (suffix === ".axe") {
         const moduleName = name.replace(/\.axe$/, "").replace(/[\\/]/g, ".");
         template = `use std.io;\n\npub def ${moduleName}() {\n    println("Hello from ${moduleName}!");\n}\n`;
       }
