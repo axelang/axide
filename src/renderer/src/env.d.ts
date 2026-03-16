@@ -67,7 +67,7 @@ export interface Settings {
   axePath: string
   axelsPath: string
   axefmtPath: string
-  gdbPath: string
+  debuggerPath: string
   lastOpenedFolder: string
   lastOpenedFile: string
 }

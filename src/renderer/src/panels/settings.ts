@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS: Settings = {
   axePath: 'axe',
   axelsPath: 'axels',
   axefmtPath: 'axefmt',
-  gdbPath: 'lldb-mi',
+  debuggerPath: 'lldb-dap',
   lastOpenedFolder: '',
   lastOpenedFile: ''
 }
@@ -64,8 +64,8 @@ export async function initSettings(container: HTMLElement, changedCb: (settings:
         <input type="text" class="setting-text" id="set-axefmt-path" value="${esc(currentSettings.axefmtPath)}" />
       </div>
       <div class="setting-row">
-        <div><div class="setting-label">Debugger Path (lldb-mi/gdb)</div></div>
-        <input type="text" class="setting-text" id="set-gdb-path" value="${esc(currentSettings.gdbPath)}" />
+        <div><div class="setting-label">Debugger Path (lldb-dap/gdb)</div></div>
+        <input type="text" class="setting-text" id="set-debugger-path" value="${esc(currentSettings.debuggerPath)}" />
       </div>
     </div>
   `
@@ -95,7 +95,7 @@ export async function initSettings(container: HTMLElement, changedCb: (settings:
     ['set-axe-path', 'axePath'],
     ['set-axels-path', 'axelsPath'],
     ['set-axefmt-path', 'axefmtPath'],
-    ['set-gdb-path', 'gdbPath']
+    ['set-debugger-path', 'debuggerPath']
   ]
   for (const [id, key] of textFields) {
     document.getElementById(id)?.addEventListener('change', (e) => {

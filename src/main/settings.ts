@@ -11,7 +11,7 @@ export interface Settings {
   axePath: string
   axelsPath: string
   axefmtPath: string
-  gdbPath: string
+  debuggerPath: string
   lastOpenedFolder: string
   lastOpenedFile: string
 }
@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS: Settings = {
   axePath: 'axe',
   axelsPath: 'axels',
   axefmtPath: 'axefmt',
-  gdbPath: 'lldb-mi',
+  debuggerPath: process.platform === 'darwin' ? 'lldb-dap' : 'gdb',
   lastOpenedFolder: '',
   lastOpenedFile: ''
 }
